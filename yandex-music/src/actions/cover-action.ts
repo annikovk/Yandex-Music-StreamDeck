@@ -1,4 +1,4 @@
-import { action, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import https from "https";
 import http from "http";
@@ -19,6 +19,16 @@ export class CoverAction extends SingletonAction {
         await this.updateCover(ev.action);
     }
 
+    override async onKeyDown(ev: KeyDownEvent): Promise<void> {
+        if (!yandexMusicController.isConnected()) {
+            await yandexMusicController.ensureAppRunning();
+        }
+        const result = await yandexMusicController.togglePlayback();
+        if (!result) {
+            await ev.action.showAlert();
+        }
+    }
+
     override onWillDisappear(ev: WillDisappearEvent): void {
         this.contexts.delete(ev.action.id);
 
@@ -33,6 +43,18 @@ export class CoverAction extends SingletonAction {
         if (this.contexts.size === 0) return;
 
         try {
+            if (!yandexMusicController.isConnected()) {
+                // App not connected, show default icon
+                for (const contextId of this.contexts) {
+                    const action = this.actions.find((a) => a.id === contextId);
+                    if (action) {
+                        await action.setImage("imgs/category-icon");
+                    }
+                }
+                this.lastTrackId = null;
+                return;
+            }
+
             const trackInfo = await yandexMusicController.getTrackInfo();
             if (!trackInfo || !trackInfo.coverUrl) return;
 
@@ -57,6 +79,11 @@ export class CoverAction extends SingletonAction {
 
     private async updateCover(action: any): Promise<void> {
         try {
+            if (!yandexMusicController.isConnected()) {
+                await action.setImage("imgs/category-icon");
+                return;
+            }
+
             const trackInfo = await yandexMusicController.getTrackInfo();
             if (!trackInfo || !trackInfo.coverUrl) return;
 

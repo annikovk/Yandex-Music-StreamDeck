@@ -1,5 +1,9 @@
 import CDP from "chrome-remote-interface";
 import streamDeck from "@elgato/streamdeck";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 export interface TrackInfo {
     coverUrl: string;
@@ -46,6 +50,37 @@ class YandexMusicController {
             return true;
         } catch (err) {
             streamDeck.logger.error(`Error connecting to new port ${newPort}:`, err);
+            return false;
+        }
+    }
+
+    private async launchApp(): Promise<boolean> {
+        try {
+            // Kill existing app if running
+            if (!this.isConnected()) {
+                streamDeck.logger.info("Killing existing Yandex Music process...");
+                try {
+                    await execAsync("pkill -f 'Яндекс Музыка'");
+                    // Wait for the app to fully terminate
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (err) {
+                    streamDeck.logger.warn("Error killing existing app (may not be running):", err);
+                }
+            }
+
+            streamDeck.logger.info("Attempting to launch Yandex Music with debugging port...");
+
+            const command = `open -a "/Applications/Яндекс Музыка.app" --args --remote-debugging-port=${this.port}`;
+            await execAsync(command);
+
+            streamDeck.logger.info("Launch command executed, waiting for app to start...");
+
+            // Wait for the app to start (give it some time to initialize)
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            return true;
+        } catch (err) {
+            streamDeck.logger.error("Error launching Yandex Music:", err);
             return false;
         }
     }
@@ -136,6 +171,31 @@ class YandexMusicController {
             return !!client;
         } catch (err) {
             streamDeck.logger.error("Error checking Yandex Music connection:", err);
+            return false;
+        }
+    }
+
+    isConnected(): boolean {
+        return this.connected;
+    }
+
+    async ensureAppRunning(): Promise<boolean> {
+        if (this.connected) {
+            return true;
+        }
+
+        streamDeck.logger.info("App not connected, attempting to launch...");
+        const launched = await this.launchApp();
+        if (!launched) {
+            return false;
+        }
+
+        // Try to connect after launching
+        try {
+            await this.connect();
+            return this.connected;
+        } catch (err) {
+            streamDeck.logger.error("Failed to connect after launching:", err);
             return false;
         }
     }

@@ -26,6 +26,9 @@ export class PlayPauseAction extends SingletonAction {
     }
 
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
+        if (!yandexMusicController.isConnected()) {
+            await yandexMusicController.ensureAppRunning();
+        }
         const result = await yandexMusicController.togglePlayback();
         if (!result) {
             await ev.action.showAlert();
