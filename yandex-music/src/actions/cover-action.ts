@@ -48,7 +48,7 @@ export class CoverAction extends SingletonAction {
                 for (const contextId of this.contexts) {
                     const action = this.actions.find((a) => a.id === contextId);
                     if (action) {
-                        await action.setImage("imgs/category-icon");
+                        await action.setImage("imgs/App-logo");
                     }
                 }
                 this.lastTrackId = null;
