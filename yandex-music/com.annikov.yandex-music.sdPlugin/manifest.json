@@ -1,0 +1,172 @@
+{
+	"Name": "Yandex Music",
+	"Version": "1.0.0.0",
+	"Author": "Konstantin Annikov",
+	"Actions": [
+		{
+			"Name": "Play/Pause",
+			"UUID": "com.annikov.yandex-music.play-pause",
+			"Icon": "imgs/ym-play",
+			"Tooltip": "Toggle playback",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-play",
+					"Name": "Play"
+				},
+				{
+					"Image": "imgs/ym-pause",
+					"Name": "Pause"
+				}
+			]
+		},
+		{
+			"Name": "Previous Track",
+			"UUID": "com.annikov.yandex-music.previous",
+			"Icon": "imgs/ym-back",
+			"Tooltip": "Previous track",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-back"
+				}
+			]
+		},
+		{
+			"Name": "Next Track",
+			"UUID": "com.annikov.yandex-music.next",
+			"Icon": "imgs/ym-next",
+			"Tooltip": "Next track",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-next"
+				}
+			]
+		},
+		{
+			"Name": "Like",
+			"UUID": "com.annikov.yandex-music.like",
+			"Icon": "imgs/ym-no-like",
+			"Tooltip": "Like current track",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-no-like",
+					"Name": "Not Liked"
+				},
+				{
+					"Image": "imgs/ym-like",
+					"Name": "Liked"
+				}
+			]
+		},
+		{
+			"Name": "Dislike",
+			"UUID": "com.annikov.yandex-music.dislike",
+			"Icon": "imgs/ym-dislike",
+			"Tooltip": "Dislike current track",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-dislike"
+				}
+			]
+		},
+		{
+			"Name": "Mute",
+			"UUID": "com.annikov.yandex-music.mute",
+			"Icon": "imgs/ym-music-on",
+			"Tooltip": "Toggle mute",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/ym-music-on",
+					"Name": "Sound On"
+				},
+				{
+					"Image": "imgs/ym-music-off",
+					"Name": "Sound Off"
+				}
+			]
+		},
+		{
+			"Name": "Track Cover",
+			"UUID": "com.annikov.yandex-music.cover",
+			"Icon": "imgs/App-logo",
+			"Tooltip": "Display current track cover",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/App-logo"
+				}
+			]
+		},
+		{
+			"Name": "Track Info",
+			"UUID": "com.annikov.yandex-music.track-info",
+			"Icon": "imgs/App-logo",
+			"Tooltip": "Display track name (scrolling)",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIiIGhlaWdodD0iNzIiIHZpZXdCb3g9IjAgMCA3MiA3MiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcyIiBoZWlnaHQ9IjcyIiBmaWxsPSIjMDAwMDAwIi8+Cjwvc3ZnPgo="
+				}
+			]
+		},
+		{
+			"Name": "Track Time",
+			"UUID": "com.annikov.yandex-music.time-total",
+			"Icon": "imgs/App-logo",
+			"Tooltip": "Display current/total time",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIiIGhlaWdodD0iNzIiIHZpZXdCb3g9IjAgMCA3MiA3MiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcyIiBoZWlnaHQ9IjcyIiBmaWxsPSIjMDAwMDAwIi8+Cjwvc3ZnPgo="
+				}
+			]
+		}
+	],
+	"Category": "Yandex Music",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"Description": "Control Yandex Music desktop app with Stream Deck",
+	"Icon": "imgs/plugin/marketplace",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "6.9"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "enabled"
+	},
+	"UUID": "com.annikov.yandex-music"
+}
