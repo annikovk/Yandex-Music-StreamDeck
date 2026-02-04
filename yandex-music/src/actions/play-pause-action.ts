@@ -12,6 +12,15 @@ const CATEGORY_IMAGE = "imgs/category-icon";
 const STATE_PAUSED = 0;
 const STATE_PLAYING = 1;
 
+// Play button SVG path (centered, white)
+const PLAY_BUTTON_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <circle cx="72" cy="72" r="36" fill="rgba(0,0,0,0.6)"/>
+  <path fill="#ffffff" d="M62 52 L92 72 L62 92 Z"/>
+</svg>`;
+
+const PLAY_BUTTON_BASE64 = Buffer.from(PLAY_BUTTON_SVG).toString("base64");
+
 /**
  * PlayPauseAction - Controls Yandex Music playback and displays album cover
  */
@@ -134,16 +143,26 @@ export class PlayPauseAction extends SingletonAction {
     }
 
     private async setActionImage(action: any, coverUrl: string, isPlaying: boolean): Promise<void> {
-        if (isPlaying) {
-            const dataUrl = await this.downloadImage(coverUrl);
-            if (dataUrl) {
+        const dataUrl = await this.downloadImage(coverUrl);
+        if (dataUrl) {
+            if (isPlaying) {
                 await action.setImage(dataUrl);
+            } else {
+                const overlayedImage = this.createPausedOverlay(dataUrl);
+                await action.setImage(overlayedImage);
             }
-            await action.setState(STATE_PLAYING);
-        } else {
-            await action.setImage(DEFAULT_IMAGE);
-            await action.setState(STATE_PAUSED);
         }
+        await action.setState(isPlaying ? STATE_PLAYING : STATE_PAUSED);
+    }
+
+    private createPausedOverlay(coverDataUrl: string): string {
+        // Create an SVG that layers the cover image with a play button overlay
+        const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="144" viewBox="0 0 144 144">
+  <image href="${coverDataUrl}" width="144" height="144"/>
+  <image href="data:image/svg+xml;base64,${PLAY_BUTTON_BASE64}" width="144" height="144"/>
+</svg>`;
+        return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
     }
 
     private buildTrackId(trackInfo: { title: string; artist: string }, isPlaying: boolean): string {
