@@ -6,7 +6,6 @@ import { NextTrackAction } from "./actions/next-track-action";
 import { LikeAction } from "./actions/like-action";
 import { DislikeAction } from "./actions/dislike-action";
 import { MuteAction } from "./actions/mute-action";
-import { CoverAction } from "./actions/cover-action";
 import { yandexMusicController } from "./utils/yandex-music-controller";
 
 // Enable info logging
@@ -19,7 +18,6 @@ streamDeck.actions.registerAction(new NextTrackAction());
 streamDeck.actions.registerAction(new LikeAction());
 streamDeck.actions.registerAction(new DislikeAction());
 streamDeck.actions.registerAction(new MuteAction());
-streamDeck.actions.registerAction(new CoverAction());
 
 // Initialize CDP connection on startup
 yandexMusicController

@@ -6,79 +6,65 @@
 		{
 			"Name": "Play/Pause",
 			"UUID": "com.annikov.yandex-music.play-pause",
-			"Icon": "imgs/ym-play",
-			"Tooltip": "Toggle playback",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/ym-play",
-					"Name": "Play"
-				},
-				{
-					"Image": "imgs/ym-pause",
-					"Name": "Pause"
-				}
-			]
-		},
-		{
-			"Name": "Play/Pause with Cover",
-			"UUID": "com.annikov.yandex-music.cover",
-			"Icon": "imgs/App-logo",
+			"Icon": "imgs/actions/ym-play",
 			"Tooltip": "Toggle playback and display current track cover",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/App-logo"
+					"Image": "imgs/actions/ym-pause",
+					"Name": "Paused"
+				},
+				{
+					"Image": "imgs/actions/ym-play",
+					"Name": "Playing"
 				}
 			]
 		},
 		{
 			"Name": "Previous Track",
 			"UUID": "com.annikov.yandex-music.previous",
-			"Icon": "imgs/ym-back",
+			"Icon": "imgs/actions/ym-back",
 			"Tooltip": "Previous track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/ym-back"
+					"Image": "imgs/actions/ym-back"
 				}
 			]
 		},
 		{
 			"Name": "Next Track",
 			"UUID": "com.annikov.yandex-music.next",
-			"Icon": "imgs/ym-next",
+			"Icon": "imgs/actions/ym-next",
 			"Tooltip": "Next track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/ym-next"
+					"Image": "imgs/actions/ym-next"
 				}
 			]
 		},
 		{
 			"Name": "Like",
 			"UUID": "com.annikov.yandex-music.like",
-			"Icon": "imgs/ym-no-like",
+			"Icon": "imgs/actions/ym-no-like",
 			"Tooltip": "Like current track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/ym-no-like",
+					"Image": "imgs/actions/ym-no-like",
 					"Name": "Not Liked"
 				},
 				{
-					"Image": "imgs/ym-like",
+					"Image": "imgs/actions/ym-like",
 					"Name": "Liked"
 				}
 			]
@@ -86,32 +72,32 @@
 		{
 			"Name": "Dislike",
 			"UUID": "com.annikov.yandex-music.dislike",
-			"Icon": "imgs/ym-dislike",
+			"Icon": "imgs/actions/ym-dislike",
 			"Tooltip": "Dislike current track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/ym-dislike"
+					"Image": "imgs/actions/ym-dislike"
 				}
 			]
 		},
 		{
 			"Name": "Mute",
 			"UUID": "com.annikov.yandex-music.mute",
-			"Icon": "imgs/ym-music-on",
+			"Icon": "imgs/actions/ym-music-on",
 			"Tooltip": "Toggle mute",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/ym-music-on",
+					"Image": "imgs/actions/ym-music-on",
 					"Name": "Sound On"
 				},
 				{
-					"Image": "imgs/ym-music-off",
+					"Image": "imgs/actions/ym-music-off",
 					"Name": "Sound Off"
 				}
 			]
