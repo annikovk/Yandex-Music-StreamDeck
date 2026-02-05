@@ -1,6 +1,6 @@
 # Yandex Music for Stream Deck
 
-[![Get it on Elgato Marketplace](https://docs.elgato.com/img/badges/get-it-on-marketplace--dark.svg)](https://marketplace.elgato.com/product/yandex-music)
+[![Get it on Elgato Marketplace](https://docs.elgato.com/img/badges/get-it-on-marketplace--dark.svg)](https://marketplace.elgato.com/product/yandex-music-c28f2f6e-bed9-41e8-a2f1-e9794ecb9063)
 
 Control Yandex Music desktop app directly from your Stream Deck.
 
