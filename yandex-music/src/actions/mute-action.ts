@@ -1,5 +1,6 @@
 import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
+import { trackAction } from "../utils/analytics";
 
 @action({ UUID: "com.annikov.yandex-music.mute" })
 export class MuteAction extends SingletonAction {
@@ -26,6 +27,8 @@ export class MuteAction extends SingletonAction {
     }
 
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
+        trackAction("mute");
+
         const result = await yandexMusicController.toggleMute();
         if (!result) {
             await ev.action.showAlert();

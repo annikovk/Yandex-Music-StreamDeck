@@ -1,5 +1,6 @@
 import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
+import { trackAction } from "../utils/analytics";
 
 @action({ UUID: "com.annikov.yandex-music.like" })
 export class LikeAction extends SingletonAction {
@@ -26,6 +27,8 @@ export class LikeAction extends SingletonAction {
     }
 
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
+        trackAction("like");
+
         const result = await yandexMusicController.likeTrack();
         if (!result) {
             await ev.action.showAlert();
