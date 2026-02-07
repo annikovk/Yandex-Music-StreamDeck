@@ -2,6 +2,9 @@ import CDP from "chrome-remote-interface";
 import streamDeck from "@elgato/streamdeck";
 import { exec } from "child_process";
 import { promisify } from "util";
+import os from "os";
+import { promises as fs } from "fs";
+import path from "path";
 
 const execAsync = promisify(exec);
 
@@ -55,34 +58,116 @@ class YandexMusicController {
     }
 
     private async launchApp(): Promise<boolean> {
+        const platform = process.platform;
+        streamDeck.logger.info(`Launching Yandex Music on platform: ${platform}`);
+
         try {
-            // Kill existing app if running
+            if (platform === 'darwin') {
+                return await this.launchAppMacOS();
+            } else if (platform === 'win32') {
+                return await this.launchAppWindows();
+            } else {
+                streamDeck.logger.error(`Unsupported platform: ${platform}`);
+                return false;
+            }
+        } catch (err) {
+            streamDeck.logger.error(`Error launching Yandex Music on ${platform}:`, err);
+            return false;
+        }
+    }
+
+    private async launchAppMacOS(): Promise<boolean> {
+        try {
             if (!this.isConnected()) {
-                streamDeck.logger.info("Killing existing Yandex Music process...");
+                streamDeck.logger.info("Killing existing Yandex Music process (macOS)...");
                 try {
                     await execAsync("pkill -f 'Яндекс Музыка'");
-                    // Wait for the app to fully terminate
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 } catch (err) {
                     streamDeck.logger.warn("Error killing existing app (may not be running):", err);
                 }
             }
 
-            streamDeck.logger.info("Attempting to launch Yandex Music with debugging port...");
-
+            streamDeck.logger.info("Launching Yandex Music with debugging port (macOS)...");
             const command = `open -a "/Applications/Яндекс Музыка.app" --args --remote-debugging-port=${this.port}`;
             await execAsync(command);
 
             streamDeck.logger.info("Launch command executed, waiting for app to start...");
-
-            // Wait for the app to start (give it some time to initialize)
             await new Promise(resolve => setTimeout(resolve, 3000));
 
             return true;
         } catch (err) {
-            streamDeck.logger.error("Error launching Yandex Music:", err);
+            streamDeck.logger.error("Error launching Yandex Music (macOS):", err);
             return false;
         }
+    }
+
+    private async launchAppWindows(): Promise<boolean> {
+        try {
+            if (!this.isConnected()) {
+                streamDeck.logger.info("Killing existing Yandex Music process (Windows)...");
+                try {
+                    // Try both possible executable names
+                    await execAsync('taskkill /F /IM "Яндекс Музыка.exe" 2>nul || taskkill /F /IM "YandexMusic.exe" 2>nul');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (err) {
+                    streamDeck.logger.warn("Error killing existing app (may not be running):", err);
+                }
+            }
+
+            streamDeck.logger.info("Finding Yandex Music installation (Windows)...");
+            const appPath = await this.getWindowsAppPath();
+
+            if (!appPath) {
+                streamDeck.logger.error("Yandex Music not found. Please install from https://music.yandex.ru/download/");
+                return false;
+            }
+
+            streamDeck.logger.info(`Found Yandex Music at: ${appPath}`);
+            streamDeck.logger.info("Launching Yandex Music with debugging port (Windows)...");
+
+            // Use quoted path to handle spaces and Cyrillic characters
+            const command = `"${appPath}" --remote-debugging-port=${this.port}`;
+            await execAsync(command);
+
+            streamDeck.logger.info("Launch command executed, waiting for app to start...");
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            return true;
+        } catch (err) {
+            streamDeck.logger.error("Error launching Yandex Music (Windows):", err);
+            return false;
+        }
+    }
+
+    private async getWindowsAppPath(): Promise<string | null> {
+        const possiblePaths = [
+            // LOCALAPPDATA paths (most common for user-installed apps)
+            path.join(process.env.LOCALAPPDATA || '', 'Programs', 'YandexMusic', 'Яндекс Музыка.exe'),
+            path.join(process.env.LOCALAPPDATA || '', 'Programs', 'YandexMusic', 'YandexMusic.exe'),
+
+            // Program Files paths (system-wide installations)
+            path.join(process.env.ProgramFiles || 'C:\\Program Files', 'YandexMusic', 'Яндекс Музыка.exe'),
+            path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'YandexMusic', 'YandexMusic.exe'),
+
+            // Alternative installation paths with space in directory name
+            path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Yandex Music', 'Яндекс Музыка.exe'),
+            path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Yandex Music', 'YandexMusic.exe'),
+        ];
+
+        for (const appPath of possiblePaths) {
+            try {
+                await fs.access(appPath);
+                streamDeck.logger.info(`Found Yandex Music at: ${appPath}`);
+                return appPath;
+            } catch {
+                // File doesn't exist, try next path
+            }
+        }
+
+        streamDeck.logger.error("Yandex Music executable not found in any expected location");
+        streamDeck.logger.error("Searched paths:", possiblePaths);
+        return null;
     }
 
     async connect(): Promise<any> {
