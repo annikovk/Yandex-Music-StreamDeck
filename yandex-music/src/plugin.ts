@@ -8,7 +8,7 @@ import { LikeAction } from "./actions/like-action";
 import { DislikeAction } from "./actions/dislike-action";
 import { MuteAction } from "./actions/mute-action";
 import { yandexMusicController } from "./utils/yandex-music-controller";
-import { reportInstallation, setInstallationId } from "./utils/analytics";
+import { reportInstallation, setInstallationId, logAndReportError } from "./utils/analytics";
 
 async function initializeInstallationId(): Promise<string> {
     const settings = await streamDeck.settings.getGlobalSettings() as { installation_id?: string };
@@ -46,7 +46,7 @@ await yandexMusicController
         streamDeck.logger.info("CDP connection initialized on plugin startup");
     })
     .catch((err) => {
-        streamDeck.logger.error("Error initializing CDP connection:", err);
+        logAndReportError("Error initializing CDP connection", err);
     });
 
 // Finally, connect to the Stream Deck
@@ -65,5 +65,5 @@ reportInstallation({
         streamDeck.logger.info("Installation info reported");
     })
     .catch((err) => {
-        streamDeck.logger.error("Error reporting installation info:", err);
+        logAndReportError("Error reporting installation info", err);
     });

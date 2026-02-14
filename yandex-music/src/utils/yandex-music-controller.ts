@@ -5,6 +5,7 @@ import { promisify } from "util";
 import os from "os";
 import { promises as fs } from "fs";
 import path from "path";
+import { logAndReportError } from "./analytics";
 
 const execAsync = promisify(exec);
 
@@ -52,7 +53,7 @@ class YandexMusicController {
             streamDeck.logger.info(`Successfully connected to new port ${newPort}`);
             return true;
         } catch (err) {
-            streamDeck.logger.error(`Error connecting to new port ${newPort}:`, err);
+            logAndReportError(`Error connecting to new port ${newPort}`, err);
             return false;
         }
     }
@@ -81,11 +82,11 @@ class YandexMusicController {
             } else if (platform === 'win32') {
                 return await this.launchAppWindows();
             } else {
-                streamDeck.logger.error(`Unsupported platform: ${platform}`);
+                logAndReportError(`Unsupported platform: ${platform}`, undefined);
                 return false;
             }
         } catch (err) {
-            streamDeck.logger.error(`Error launching Yandex Music on ${platform}:`, err);
+            logAndReportError(`Error launching Yandex Music on ${platform}`, err);
             return false;
         }
     }
@@ -94,7 +95,7 @@ class YandexMusicController {
         try {
             const appPath = await this.detectMacOSAppPath();
             if (!appPath) {
-                streamDeck.logger.error("Yandex Music not found. Please install from https://music.yandex.ru/download/");
+                logAndReportError("Yandex Music not found. Please install from https://music.yandex.ru/download/", undefined);
                 return false;
             }
 
@@ -117,7 +118,7 @@ class YandexMusicController {
 
             return true;
         } catch (err) {
-            streamDeck.logger.error("Error launching Yandex Music (macOS):", err);
+            logAndReportError("Error launching Yandex Music (macOS)", err);
             return false;
         }
     }
@@ -139,7 +140,7 @@ class YandexMusicController {
             const appPath = await this.detectWindowsAppPath();
 
             if (!appPath) {
-                streamDeck.logger.error("Yandex Music not found. Please install from https://music.yandex.ru/download/");
+                logAndReportError("Yandex Music not found. Please install from https://music.yandex.ru/download/", undefined);
                 return false;
             }
 
@@ -152,7 +153,7 @@ class YandexMusicController {
 
             exec(command, (error) => {
                 if (error) {
-                    streamDeck.logger.error("Error in background process:", error);
+                    logAndReportError("Error in background process", error);
                 }
             });
 
@@ -172,15 +173,15 @@ class YandexMusicController {
                 } catch (err: any) {
                     // Port not ready yet, continue waiting
                     if (i === 14) {
-                        streamDeck.logger.error("Failed to connect to CDP port after 15 seconds:", err.message);
+                        logAndReportError("Failed to connect to CDP port after 15 seconds", err);
                     }
                 }
             }
 
-            streamDeck.logger.error("Timeout waiting for CDP port");
+            logAndReportError("Timeout waiting for CDP port", undefined);
             return false;
         } catch (err) {
-            streamDeck.logger.error("Error launching Yandex Music (Windows):", err);
+            logAndReportError("Error launching Yandex Music (Windows)", err);
             return false;
         }
     }
@@ -214,8 +215,7 @@ class YandexMusicController {
             }
         }
 
-        streamDeck.logger.error("Yandex Music executable not found in any expected location");
-        streamDeck.logger.error("Searched paths:", possiblePaths);
+        logAndReportError(`Yandex Music executable not found in any expected location. Searched paths: ${possiblePaths.join(', ')}`, undefined);
         return null;
     }
 
@@ -242,7 +242,7 @@ class YandexMusicController {
                 this.reconnectAttempts = 0;
 
                 this.client.on("disconnect", () => {
-                    streamDeck.logger.error("CDP connection lost, attempting reconnection...");
+                    logAndReportError("CDP connection lost, attempting reconnection", undefined);
                     this.connected = false;
                     this.client = null;
                     this.connectionPromise = null;
@@ -257,10 +257,9 @@ class YandexMusicController {
                 this.connectionPromise = null;
 
                 if (err.message?.includes("connect ECONNREFUSED")) {
-                    streamDeck.logger.error(`Failed to connect to Yandex Music on port ${this.port}`);
-                    streamDeck.logger.error(`Ensure the app is running with --remote-debugging-port=${this.port}`);
+                    logAndReportError(`Failed to connect to Yandex Music on port ${this.port}. Ensure the app is running with --remote-debugging-port=${this.port}`, err);
                 } else {
-                    streamDeck.logger.error("Error creating CDP client:", err);
+                    logAndReportError("Error creating CDP client", err);
                 }
 
                 reject(err);
@@ -272,7 +271,7 @@ class YandexMusicController {
 
     private async reconnect(): Promise<void> {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            streamDeck.logger.error(`Max reconnection attempts reached (${this.maxReconnectAttempts})`);
+            logAndReportError(`Max reconnection attempts reached (${this.maxReconnectAttempts})`, undefined);
             return;
         }
 
@@ -284,7 +283,7 @@ class YandexMusicController {
                 await this.connect();
                 streamDeck.logger.info("Reconnection successful");
             } catch (err) {
-                streamDeck.logger.error("Reconnection error:", err);
+                logAndReportError("Reconnection error", err);
                 this.reconnect();
             }
         }, this.reconnectDelay * this.reconnectAttempts);
@@ -294,7 +293,7 @@ class YandexMusicController {
         try {
             return await this.connect();
         } catch (err) {
-            streamDeck.logger.error("Failed to get CDP client:", err);
+            logAndReportError("Failed to get CDP client", err);
             return null;
         }
     }
@@ -304,7 +303,7 @@ class YandexMusicController {
             const client = await this.getClient();
             return !!client;
         } catch (err) {
-            streamDeck.logger.error("Error checking Yandex Music connection:", err);
+            logAndReportError("Error checking Yandex Music connection", err);
             return false;
         }
     }
@@ -329,7 +328,7 @@ class YandexMusicController {
             await this.connect();
             return this.connected;
         } catch (err) {
-            streamDeck.logger.error("Failed to connect after launching:", err);
+            logAndReportError("Failed to connect after launching", err);
             return false;
         }
     }
@@ -356,7 +355,7 @@ class YandexMusicController {
 
             const client = await this.getClient();
             if (!client) {
-                streamDeck.logger.error("Failed to get CDP client");
+                logAndReportError("Failed to get CDP client", undefined);
                 return false;
             }
 
@@ -429,15 +428,15 @@ class YandexMusicController {
                     streamDeck.logger.info(value.message);
                     return true;
                 } else {
-                    streamDeck.logger.error("Failed to toggle playback:", value.message);
+                    logAndReportError(`Failed to toggle playback: ${value.message}`, undefined);
                     return false;
                 }
             } else {
-                streamDeck.logger.error("Failed to execute script");
+                logAndReportError("Failed to execute script", undefined);
                 return false;
             }
         } catch (err) {
-            streamDeck.logger.error("Script execution error:", err);
+            logAndReportError("Script execution error", err);
             return false;
         }
     }
@@ -472,7 +471,7 @@ class YandexMusicController {
 
             return result.result?.value?.isPlaying ?? false;
         } catch (err) {
-            streamDeck.logger.error("Error checking playback state:", err);
+            logAndReportError("Error checking playback state", err);
             return false;
         }
     }
@@ -524,7 +523,7 @@ class YandexMusicController {
 
             return result.result?.value?.isLiked ?? false;
         } catch (err) {
-            streamDeck.logger.error("Error checking like state:", err);
+            logAndReportError("Error checking like state", err);
             return false;
         }
     }
@@ -557,7 +556,7 @@ class YandexMusicController {
 
             return result.result?.value?.isMuted ?? false;
         } catch (err) {
-            streamDeck.logger.error("Error checking mute state:", err);
+            logAndReportError("Error checking mute state", err);
             return false;
         }
     }
@@ -568,7 +567,7 @@ class YandexMusicController {
 
             const client = await this.getClient();
             if (!client) {
-                streamDeck.logger.error("Failed to get CDP client");
+                logAndReportError("Failed to get CDP client", undefined);
                 return false;
             }
 
@@ -638,15 +637,15 @@ class YandexMusicController {
                     streamDeck.logger.info(`${actionDescription} successful`);
                     return true;
                 } else {
-                    streamDeck.logger.error(`Failed to execute: ${actionDescription}`, value.message);
+                    logAndReportError(`Failed to execute: ${actionDescription}: ${value.message}`, undefined);
                     return false;
                 }
             } else {
-                streamDeck.logger.error("Failed to execute script");
+                logAndReportError("Failed to execute script", undefined);
                 return false;
             }
         } catch (err) {
-            streamDeck.logger.error("Script execution error:", err);
+            logAndReportError("Script execution error", err);
             return false;
         }
     }
@@ -657,7 +656,7 @@ class YandexMusicController {
 
             const client = await this.getClient();
             if (!client) {
-                streamDeck.logger.error("Failed to get CDP client");
+                logAndReportError("Failed to get CDP client", undefined);
                 return null;
             }
 
@@ -728,15 +727,15 @@ class YandexMusicController {
                         artist: value.artist,
                     };
                 } else {
-                    streamDeck.logger.error("Failed to get track info:", value.message);
+                    logAndReportError(`Failed to get track info: ${value.message}`, undefined);
                     return null;
                 }
             } else {
-                streamDeck.logger.error("Failed to execute script");
+                logAndReportError("Failed to execute script", undefined);
                 return null;
             }
         } catch (err) {
-            streamDeck.logger.error("Script execution error:", err);
+            logAndReportError("Script execution error", err);
             return null;
         }
     }
@@ -745,7 +744,7 @@ class YandexMusicController {
         try {
             const client = await this.getClient();
             if (!client) {
-                streamDeck.logger.error("Failed to get CDP client");
+                logAndReportError("Failed to get CDP client", undefined);
                 return null;
             }
 
@@ -803,15 +802,15 @@ class YandexMusicController {
                         progressPercent: value.progressPercent,
                     };
                 } else {
-                    streamDeck.logger.error("Failed to get track time:", value.message);
+                    logAndReportError(`Failed to get track time: ${value.message}`, undefined);
                     return null;
                 }
             } else {
-                streamDeck.logger.error("Failed to execute script");
+                logAndReportError("Failed to execute script", undefined);
                 return null;
             }
         } catch (err) {
-            streamDeck.logger.error("Script execution error:", err);
+            logAndReportError("Script execution error", err);
             return null;
         }
     }
@@ -822,7 +821,7 @@ class YandexMusicController {
 
             const client = await this.getClient();
             if (!client) {
-                streamDeck.logger.error("Failed to get CDP client");
+                logAndReportError("Failed to get CDP client", undefined);
                 return false;
             }
 
@@ -882,15 +881,15 @@ class YandexMusicController {
                     streamDeck.logger.info(value.message);
                     return true;
                 } else {
-                    streamDeck.logger.error("Failed to toggle mute:", value.message);
+                    logAndReportError(`Failed to toggle mute: ${value.message}`, undefined);
                     return false;
                 }
             } else {
-                streamDeck.logger.error("Failed to execute script");
+                logAndReportError("Failed to execute script", undefined);
                 return false;
             }
         } catch (err) {
-            streamDeck.logger.error("Script execution error:", err);
+            logAndReportError("Script execution error", err);
             return false;
         }
     }
@@ -901,7 +900,7 @@ class YandexMusicController {
                 await this.client.close();
                 streamDeck.logger.info("CDP connection closed");
             } catch (err) {
-                streamDeck.logger.error("Error closing CDP connection:", err);
+                logAndReportError("Error closing CDP connection", err);
             } finally {
                 this.client = null;
                 this.connected = false;
