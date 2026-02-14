@@ -1,43 +1,13 @@
 /**
- * Typed logging utilities with error handling helpers.
- * Wraps streamDeck.logger with type-safe error handling.
+ * Typed logging utilities.
+ * Wraps streamDeck.logger with automatic error reporting to analytics.
  */
 
 import streamDeck from "@elgato/streamdeck";
+import { reportError } from "../telemetry/error-reporter";
 
-/**
- * Type guard to check if a value is an Error object.
- */
-export function isError(value: unknown): value is Error {
-    return value instanceof Error;
-}
-
-/**
- * Safely formats an error for logging.
- * Handles Error objects, strings, and unknown types.
- */
-export function formatError(error: unknown): string {
-    if (isError(error)) {
-        return error.message;
-    }
-    if (typeof error === 'string') {
-        return error;
-    }
-    if (typeof error === 'object' && error !== null) {
-        return JSON.stringify(error);
-    }
-    return String(error);
-}
-
-/**
- * Extracts stack trace from an error if available.
- */
-export function getErrorStack(error: unknown): string | undefined {
-    if (isError(error)) {
-        return error.stack;
-    }
-    return undefined;
-}
+// Re-export error utilities for convenience
+export { isError, formatError, getErrorStack } from './error-utils';
 
 /**
  * Type-safe logger wrapper around streamDeck.logger.
@@ -52,11 +22,15 @@ export const logger = {
     },
 
     error: (message: string, error?: unknown): void => {
+        // Log locally
         if (error !== undefined) {
             streamDeck.logger.error(message, error);
         } else {
             streamDeck.logger.error(message);
         }
+
+        // Report to analytics (fire-and-forget)
+        reportError(message, error);
     },
 
     setLevel: (level: "trace" | "debug" | "info" | "warn" | "error"): void => {

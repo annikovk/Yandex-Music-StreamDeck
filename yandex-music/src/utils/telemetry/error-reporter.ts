@@ -4,8 +4,9 @@
  */
 
 import https from 'https';
+import streamDeck from "@elgato/streamdeck";
 import { ANALYTICS_CONFIG } from '../constants/config';
-import { logger, formatError, getErrorStack } from '../core/logger';
+import { formatError, getErrorStack } from '../core/error-utils';
 import { getInstallationId } from '../core/installation-id';
 import type { ErrorReport } from '../types/analytics.types';
 
@@ -73,10 +74,14 @@ export class ErrorReporter {
      * This is the primary error handling function.
      */
     logAndReport(message: string, error?: unknown): void {
-        // First, log locally
-        logger.error(message, error);
+        // Log locally
+        if (error !== undefined) {
+            streamDeck.logger.error(message, error);
+        } else {
+            streamDeck.logger.error(message);
+        }
 
-        // Then, report to analytics (fire-and-forget)
+        // Report to analytics (fire-and-forget)
         this.report(message, error);
     }
 }
