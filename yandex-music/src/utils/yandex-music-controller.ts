@@ -32,6 +32,9 @@ class YandexMusicController {
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 3;
     private reconnectDelay = 1000;
+    private appJustLaunched = false;
+    private appLaunchTimestamp = 0;
+    private appLaunchGracePeriodMs = 10000; // 10 seconds grace period
 
     async setPort(newPort: number): Promise<boolean> {
         if (newPort === this.port) {
@@ -76,16 +79,22 @@ class YandexMusicController {
         const platform = process.platform;
         streamDeck.logger.info(`Launching Yandex Music on platform: ${platform}`);
 
+        // Mark app as just launched
+        this.appJustLaunched = true;
+        this.appLaunchTimestamp = Date.now();
+
         try {
             if (platform === 'darwin') {
                 return await this.launchAppMacOS();
             } else if (platform === 'win32') {
                 return await this.launchAppWindows();
             } else {
+                this.appJustLaunched = false; // Reset on error
                 logAndReportError(`Unsupported platform: ${platform}`, undefined);
                 return false;
             }
         } catch (err) {
+            this.appJustLaunched = false; // Reset on error
             logAndReportError(`Error launching Yandex Music on ${platform}`, err);
             return false;
         }
@@ -114,9 +123,25 @@ class YandexMusicController {
             await execAsync(command);
 
             streamDeck.logger.info("Launch command executed, waiting for app to start...");
-            await new Promise(resolve => setTimeout(resolve, 3000));
 
-            return true;
+            // Wait up to 15 seconds for CDP port to be ready
+            for (let i = 0; i < 15; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                streamDeck.logger.info(`Waiting for CDP port... (${i + 1}/15)`);
+
+                try {
+                    const testClient = await CDP({ port: this.port, host: 'localhost' });
+                    await testClient.close();
+                    streamDeck.logger.info("CDP port is ready!");
+                    return true;
+                } catch (err: any) {
+                    if (i === 14) {
+                        logAndReportError("Failed to connect to CDP port after 15 seconds", err);
+                    }
+                }
+            }
+
+            return false;
         } catch (err) {
             logAndReportError("Error launching Yandex Music (macOS)", err);
             return false;
@@ -326,11 +351,120 @@ class YandexMusicController {
         // Try to connect after launching
         try {
             await this.connect();
-            return this.connected;
+            if (!this.connected) {
+                return false;
+            }
+
+            // Wait for UI to be ready after connection
+            const uiReady = await this.waitForUIReady(2000);
+            return uiReady;
         } catch (err) {
             logAndReportError("Failed to connect after launching", err);
             return false;
         }
+    }
+
+    /**
+     * Waits for the Yandex Music UI to be fully loaded and ready.
+     * Checks for presence of player bar DOM elements.
+     */
+    private async waitForUIReady(timeoutMs: number = 2000): Promise<boolean> {
+        const startTime = Date.now();
+        const checkIntervalMs = 500;
+
+        while (Date.now() - startTime < timeoutMs) {
+            try {
+                const client = await this.getClient();
+                if (!client) return false;
+
+                const { Runtime } = client;
+                const result = await Runtime.evaluate({
+                    expression: `
+                        (function() {
+                            const playerBar = document.querySelector('.PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN') ||
+                                            document.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
+                            return { ready: !!playerBar };
+                        })()
+                    `,
+                    returnByValue: true,
+                });
+
+                if (result.result?.value?.ready) {
+                    streamDeck.logger.info("UI is ready");
+                    return true;
+                }
+            } catch (err) {
+                // UI not ready yet, continue waiting
+            }
+
+            await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+        }
+
+        streamDeck.logger.warn("Timeout waiting for UI to be ready, continuing anyway");
+        return true; // Don't fail completely, just warn
+    }
+
+    /**
+     * Returns true if we're within the grace period after app launch.
+     * During this period, UI operations should be more forgiving.
+     */
+    private isInLaunchGracePeriod(): boolean {
+        if (!this.appJustLaunched) return false;
+
+        const timeSinceLaunch = Date.now() - this.appLaunchTimestamp;
+        if (timeSinceLaunch > this.appLaunchGracePeriodMs) {
+            this.appJustLaunched = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Retries a UI operation with exponential backoff.
+     * Useful for operations that may fail if UI is not fully loaded.
+     */
+    private async retryUIOperation<T>(
+        operation: () => Promise<T>,
+        operationName: string,
+        maxAttempts: number = 3,
+        initialDelayMs: number = 300
+    ): Promise<T | null> {
+        // Increase attempts if in launch grace period
+        const effectiveAttempts = this.isInLaunchGracePeriod()
+            ? Math.max(maxAttempts, 4)
+            : maxAttempts;
+
+        let lastError: any;
+
+        for (let attempt = 1; attempt <= effectiveAttempts; attempt++) {
+            try {
+                const result = await operation();
+                if (result !== null) {
+                    return result;
+                }
+            } catch (err) {
+                lastError = err;
+            }
+
+            if (attempt < effectiveAttempts) {
+                const delayMs = initialDelayMs * Math.pow(2, attempt - 1);
+                streamDeck.logger.info(
+                    `${operationName} attempt ${attempt}/${effectiveAttempts} failed, ` +
+                    `retrying in ${delayMs}ms...`
+                );
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+
+        // Only log error if not in grace period
+        if (!this.isInLaunchGracePeriod()) {
+            logAndReportError(
+                `${operationName} failed after ${effectiveAttempts} attempts`,
+                lastError
+            );
+        }
+        return null;
     }
 
     async previousTrack(): Promise<boolean> {
@@ -651,18 +785,22 @@ class YandexMusicController {
     }
 
     async getTrackInfo(): Promise<TrackInfo | null> {
-        try {
-            streamDeck.logger.info("Connecting to Yandex Music");
+        return this.retryUIOperation(
+            () => this.getTrackInfoInternal(),
+            "getTrackInfo",
+            3,
+            300
+        );
+    }
 
+    private async getTrackInfoInternal(): Promise<TrackInfo | null> {
+        try {
             const client = await this.getClient();
             if (!client) {
-                logAndReportError("Failed to get CDP client", undefined);
                 return null;
             }
 
             const { Runtime } = client;
-
-            streamDeck.logger.info("Getting track info...");
 
             const result = await Runtime.evaluate({
                 expression: `
@@ -727,15 +865,13 @@ class YandexMusicController {
                         artist: value.artist,
                     };
                 } else {
-                    logAndReportError(`Failed to get track info: ${value.message}`, undefined);
+                    // Return null to trigger retry
                     return null;
                 }
             } else {
-                logAndReportError("Failed to execute script", undefined);
                 return null;
             }
         } catch (err) {
-            logAndReportError("Script execution error", err);
             return null;
         }
     }

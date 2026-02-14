@@ -59,6 +59,11 @@ export class PlayPauseAction extends SingletonAction {
                 await ev.action.showAlert();
                 return;
             }
+
+            // Small buffer after first launch
+            // ensureAppRunning already waits for UI readiness,
+            // but add 500ms cushion before first toggle
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         const result = await yandexMusicController.togglePlayback();
