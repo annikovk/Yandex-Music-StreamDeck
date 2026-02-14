@@ -57,6 +57,20 @@ class YandexMusicController {
         }
     }
 
+    /**
+     * Detects Yandex Music installation on macOS.
+     * Returns the application path if found, null otherwise.
+     */
+    async detectMacOSAppPath(): Promise<string | null> {
+        const appPath = "/Applications/Яндекс Музыка.app";
+        try {
+            await fs.access(appPath);
+            return appPath;
+        } catch {
+            return null;
+        }
+    }
+
     private async launchApp(): Promise<boolean> {
         const platform = process.platform;
         streamDeck.logger.info(`Launching Yandex Music on platform: ${platform}`);
@@ -78,6 +92,12 @@ class YandexMusicController {
 
     private async launchAppMacOS(): Promise<boolean> {
         try {
+            const appPath = await this.detectMacOSAppPath();
+            if (!appPath) {
+                streamDeck.logger.error("Yandex Music not found. Please install from https://music.yandex.ru/download/");
+                return false;
+            }
+
             if (!this.isConnected()) {
                 streamDeck.logger.info("Killing existing Yandex Music process (macOS)...");
                 try {
@@ -89,7 +109,7 @@ class YandexMusicController {
             }
 
             streamDeck.logger.info("Launching Yandex Music with debugging port (macOS)...");
-            const command = `open -a "/Applications/Яндекс Музыка.app" --args --remote-debugging-port=${this.port}`;
+            const command = `open -a "${appPath}" --args --remote-debugging-port=${this.port}`;
             await execAsync(command);
 
             streamDeck.logger.info("Launch command executed, waiting for app to start...");
@@ -116,7 +136,7 @@ class YandexMusicController {
             }
 
             streamDeck.logger.info("Finding Yandex Music installation (Windows)...");
-            const appPath = await this.getWindowsAppPath();
+            const appPath = await this.detectWindowsAppPath();
 
             if (!appPath) {
                 streamDeck.logger.error("Yandex Music not found. Please install from https://music.yandex.ru/download/");
@@ -165,7 +185,11 @@ class YandexMusicController {
         }
     }
 
-    private async getWindowsAppPath(): Promise<string | null> {
+    /**
+     * Detects Yandex Music installation on Windows.
+     * Returns the application path if found, null otherwise.
+     */
+    async detectWindowsAppPath(): Promise<string | null> {
         const possiblePaths = [
             // LOCALAPPDATA paths (most common for user-installed apps)
             path.join(process.env.LOCALAPPDATA || '', 'Programs', 'YandexMusic', 'Яндекс Музыка.exe'),
