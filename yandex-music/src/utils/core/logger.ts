@@ -22,15 +22,19 @@ export const logger = {
     },
 
     error: (message: string, error?: unknown): void => {
-        // Log locally
+        // Log locally first (always succeeds)
         if (error !== undefined) {
             streamDeck.logger.error(message, error);
         } else {
             streamDeck.logger.error(message);
         }
 
-        // Report to analytics (fire-and-forget)
-        reportError(message, error);
+        // Report to analytics (fire-and-forget, never throw)
+        try {
+            reportError(message, error);
+        } catch {
+            // Silently ignore any errors in error reporting to prevent cascading failures
+        }
     },
 
     setLevel: (level: "trace" | "debug" | "info" | "warn" | "error"): void => {

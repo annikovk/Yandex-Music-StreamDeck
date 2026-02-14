@@ -41,23 +41,24 @@ streamDeck.actions.registerAction(new LikeAction());
 streamDeck.actions.registerAction(new DislikeAction());
 streamDeck.actions.registerAction(new MuteAction());
 
+// Connect to the Stream Deck FIRST (required before using any streamDeck APIs)
+await streamDeck.connect();
 
-// Initialize CDP connection on startup
+// NOW initialize installation ID (after streamDeck.connect so we can access settings)
+const installationId = await initializeInstallationId();
+setInstallationId(installationId);
+streamDeck.logger.info("Installation ID initialized:", installationId);
+
+// Try to connect to CDP if app is already running (non-fatal)
 await yandexMusicController
     .connect()
     .then(() => {
-        streamDeck.logger.info("CDP connection initialized on plugin startup");
+        streamDeck.logger.info("CDP connection established - Yandex Music is already running");
     })
-    .catch((err) => {
-        logAndReportError("Error initializing CDP connection", err);
+    .catch(() => {
+        // This is expected if the app isn't running yet - it will be launched when needed
+        streamDeck.logger.info("Yandex Music not running yet - will launch on first button press");
     });
-
-// Finally, connect to the Stream Deck
-await streamDeck.connect();
-
-// Initialize and set installation ID
-const installationId = await initializeInstallationId();
-setInstallationId(installationId);
 
 // Report installation information to analytics
 const streamDeckInfo: StreamDeckInfo = {
