@@ -1,6 +1,6 @@
 import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
-import { trackAction } from "../utils/analytics";
+import { trackAction } from "../utils/telemetry/analytics-reporter";
 
 @action({ UUID: "com.annikov.yandex-music.mute" })
 export class MuteAction extends SingletonAction {

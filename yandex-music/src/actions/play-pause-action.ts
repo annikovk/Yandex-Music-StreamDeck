@@ -2,7 +2,7 @@ import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEv
 import http from "http";
 import https from "https";
 import { yandexMusicController } from "../utils/yandex-music-controller";
-import { trackAction } from "../utils/analytics";
+import { trackAction } from "../utils/telemetry/analytics-reporter";
 
 /**
  * Constants

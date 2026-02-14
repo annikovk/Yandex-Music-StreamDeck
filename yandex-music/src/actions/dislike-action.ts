@@ -1,6 +1,6 @@
 import { action, KeyDownEvent, SingletonAction } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
-import { trackAction } from "../utils/analytics";
+import { trackAction } from "../utils/telemetry/analytics-reporter";
 
 @action({ UUID: "com.annikov.yandex-music.dislike" })
 export class DislikeAction extends SingletonAction {

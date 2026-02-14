@@ -8,8 +8,10 @@ import { LikeAction } from "./actions/like-action";
 import { DislikeAction } from "./actions/dislike-action";
 import { MuteAction } from "./actions/mute-action";
 import { yandexMusicController } from "./utils/yandex-music-controller";
-import { reportInstallation, setInstallationId } from "./utils/analytics";
-import { logAndReportError } from "./utils/error-reporting";
+import { setInstallationId } from "./utils/core/installation-id";
+import { logAndReportError } from "./utils/telemetry/error-reporter";
+import { installationReporter } from "./utils/telemetry/installation-reporter";
+import type { StreamDeckInfo } from "./utils/types/analytics.types";
 
 async function initializeInstallationId(): Promise<string> {
     const settings = await streamDeck.settings.getGlobalSettings() as { installation_id?: string };
@@ -58,10 +60,17 @@ const installationId = await initializeInstallationId();
 setInstallationId(installationId);
 
 // Report installation information to analytics
-reportInstallation({
+const streamDeckInfo: StreamDeckInfo = {
     application: streamDeck.info.application,
     plugin: streamDeck.info.plugin,
-})
+};
+
+installationReporter
+    .report(
+        streamDeckInfo,
+        () => yandexMusicController.detectMacOSAppPath(),
+        () => yandexMusicController.isConnected()
+    )
     .then(() => {
         streamDeck.logger.info("Installation info reported");
     })
