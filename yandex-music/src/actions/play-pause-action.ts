@@ -54,7 +54,11 @@ export class PlayPauseAction extends SingletonAction {
         trackAction("play-pause");
 
         if (!yandexMusicController.isConnected()) {
-            await yandexMusicController.ensureAppRunning();
+            const appRunning = await yandexMusicController.ensureAppRunning();
+            if (!appRunning) {
+                await ev.action.showAlert();
+                return;
+            }
         }
 
         const result = await yandexMusicController.togglePlayback();

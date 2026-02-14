@@ -126,14 +126,39 @@ class YandexMusicController {
             streamDeck.logger.info(`Found Yandex Music at: ${appPath}`);
             streamDeck.logger.info("Launching Yandex Music with debugging port (Windows)...");
 
-            // Use quoted path to handle spaces and Cyrillic characters
-            const command = `"${appPath}" --remote-debugging-port=${this.port}`;
-            await execAsync(command);
+            // Launch process in background using start command
+            // Use /B flag to prevent opening a new window
+            const command = `start /B "" "${appPath}" --remote-debugging-port=${this.port}`;
+
+            exec(command, (error) => {
+                if (error) {
+                    streamDeck.logger.error("Error in background process:", error);
+                }
+            });
 
             streamDeck.logger.info("Launch command executed, waiting for app to start...");
-            await new Promise(resolve => setTimeout(resolve, 3000));
 
-            return true;
+            // Wait longer and check for port availability
+            for (let i = 0; i < 15; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                streamDeck.logger.info(`Waiting for CDP port... (${i + 1}/15)`);
+
+                try {
+                    // Try to check if port is available
+                    const testClient = await CDP({ port: this.port, host: 'localhost' });
+                    await testClient.close();
+                    streamDeck.logger.info("CDP port is ready!");
+                    return true;
+                } catch (err: any) {
+                    // Port not ready yet, continue waiting
+                    if (i === 14) {
+                        streamDeck.logger.error("Failed to connect to CDP port after 15 seconds:", err.message);
+                    }
+                }
+            }
+
+            streamDeck.logger.error("Timeout waiting for CDP port");
+            return false;
         } catch (err) {
             streamDeck.logger.error("Error launching Yandex Music (Windows):", err);
             return false;
@@ -185,7 +210,7 @@ class YandexMusicController {
                 }
 
                 streamDeck.logger.info("Creating new CDP connection on port", this.port);
-                this.client = await CDP({ port: this.port });
+                this.client = await CDP({ port: this.port, host: 'localhost' });
 
                 await Promise.all([this.client.Page.enable(), this.client.Runtime.enable()]);
 
