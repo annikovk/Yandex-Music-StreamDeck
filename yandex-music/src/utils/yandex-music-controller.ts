@@ -5,7 +5,7 @@ import { promisify } from "util";
 import os from "os";
 import { promises as fs } from "fs";
 import path from "path";
-import { logAndReportError } from "./analytics";
+import { logAndReportError } from "./error-reporting";
 
 const execAsync = promisify(exec);
 

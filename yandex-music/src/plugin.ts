@@ -8,7 +8,8 @@ import { LikeAction } from "./actions/like-action";
 import { DislikeAction } from "./actions/dislike-action";
 import { MuteAction } from "./actions/mute-action";
 import { yandexMusicController } from "./utils/yandex-music-controller";
-import { reportInstallation, setInstallationId, logAndReportError } from "./utils/analytics";
+import { reportInstallation, setInstallationId } from "./utils/analytics";
+import { logAndReportError } from "./utils/error-reporting";
 
 async function initializeInstallationId(): Promise<string> {
     const settings = await streamDeck.settings.getGlobalSettings() as { installation_id?: string };
