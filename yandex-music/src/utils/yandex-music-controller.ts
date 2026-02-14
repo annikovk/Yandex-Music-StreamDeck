@@ -2,7 +2,6 @@ import CDP from "chrome-remote-interface";
 import streamDeck from "@elgato/streamdeck";
 import { exec } from "child_process";
 import { promisify } from "util";
-import os from "os";
 import { promises as fs } from "fs";
 import path from "path";
 import { logAndReportError } from "./error-reporting";
@@ -356,8 +355,7 @@ class YandexMusicController {
             }
 
             // Wait for UI to be ready after connection
-            const uiReady = await this.waitForUIReady(2000);
-            return uiReady;
+            return await this.waitForUIReady(2000);
         } catch (err) {
             logAndReportError("Failed to connect after launching", err);
             return false;

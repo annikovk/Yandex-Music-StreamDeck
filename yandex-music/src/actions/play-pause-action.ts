@@ -170,7 +170,7 @@ export class PlayPauseAction extends SingletonAction {
     private createPausedOverlay(coverDataUrl: string): string {
         // Create an SVG that layers the cover image with a play button overlay
         const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="144" viewBox="0 0 144 144">
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <image href="${coverDataUrl}" width="144" height="144"/>
   <image href="data:image/svg+xml;base64,${PLAY_BUTTON_BASE64}" width="144" height="144"/>
 </svg>`;

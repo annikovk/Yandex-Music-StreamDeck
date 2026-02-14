@@ -15,12 +15,8 @@ export function setInstallationId(id: string): void {
 /**
  * Tracks action usage by sending a request to the analytics endpoint.
  * This is a fire-and-forget operation that doesn't block action execution.
- * Analytics are excluded for the developer (konstantin.annikov).
  */
 export function trackAction(actionName: string): void {
-    // Skip analytics for the developer
-    const username = os.userInfo().username;
-
     const url = `https://annikov.com/apps/yandex-music-controller/count-action.php?id=${actionName}&installation_id=${getInstallationId()}`;
 
     https.get(url, (response) => {
@@ -71,14 +67,10 @@ interface InstallationInfo {
  * Reports plugin installation information to analytics endpoint.
  * This is called once when the plugin starts to collect telemetry about
  * the installation environment and Yandex Music availability.
- * Analytics are excluded for the developer (konstantin.annikov).
  */
 export async function reportInstallation(
     streamDeckInfo?: StreamDeckInfo
 ): Promise<void> {
-    // Skip analytics for the developer
-    const username = os.userInfo().username;
-
     try {
         // Detect Yandex Music installation based on platform
         const platform = process.platform;
