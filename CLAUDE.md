@@ -132,11 +132,32 @@ com.annikov.yandex-music.sdPlugin/
 
 The manifest defines 6 actions with UUIDs that must match the `@action` decorator in TypeScript classes.
 
+## Windows Detection Improvements
+
+The Windows app detection has been enhanced with multiple fallback strategies:
+
+1. **Standard Paths**: Checks common installation locations:
+   - `%LOCALAPPDATA%\Programs\YandexMusic\` (and variants with spaces/hyphens)
+   - `%ProgramFiles%\YandexMusic\`
+   - `%ProgramFiles(x86)%\YandexMusic\`
+   - Tries both `Яндекс Музыка.exe` and `YandexMusic.exe`
+
+2. **Windows Registry**: Queries registry keys for installation path:
+   - `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\YandexMusic`
+   - `HKLM` variants for system-wide installations
+
+3. **PowerShell Search**: As a last resort, searches filesystem using PowerShell
+   - Recursively searches common directories (depth-limited to avoid slowness)
+   - 10-second timeout per search to prevent hanging
+
+If detection fails, users can specify a custom executable path in Stream Deck plugin settings.
+
 ## Debugging
 
 - Stream Deck software has debug logs: Stream Deck → Preferences → Plugins → View Logs
 - Plugin uses `streamDeck.logger` (set to "info" level in plugin.ts)
 - All errors automatically reported via `logAndReportError()` utility
+- Detection attempts are logged with "info" level for troubleshooting
 - CDP connection issues often indicate:
   - App not running with remote debugging port
   - Port conflict (check CDP_CONFIG.DEFAULT_PORT)
