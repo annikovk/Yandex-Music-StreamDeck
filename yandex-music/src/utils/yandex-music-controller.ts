@@ -42,7 +42,10 @@ export class YandexMusicController {
         // Initialize CDP components
         this.cdpClient = new CDPClientManager();
         this.cdpReconnection = new CDPReconnectionManager();
-        this.cdpExecutor = new CDPExecutor(() => this.cdpClient.getClient());
+        this.cdpExecutor = new CDPExecutor(
+            () => this.cdpClient.getClient(),
+            () => this.isInAnyGracePeriod()
+        );
 
         // Initialize app components
         this.appDetector = new AppDetector();
@@ -52,7 +55,10 @@ export class YandexMusicController {
         // Initialize DOM components
         this.playerControls = new PlayerControls(this.cdpExecutor);
         this.playerState = new PlayerStateQuery(this.cdpExecutor);
-        this.trackInfo = new TrackInfoExtractor(this.cdpExecutor);
+        this.trackInfo = new TrackInfoExtractor(
+            this.cdpExecutor,
+            () => this.isInAnyGracePeriod()
+        );
 
         // Set up reconnection callback
         this.cdpClient.setOnDisconnect(() => {
@@ -102,6 +108,15 @@ export class YandexMusicController {
 
     isConnected(): boolean {
         return this.cdpClient.isConnected();
+    }
+
+    /**
+     * Checks if we're in any grace period (app launch or connection).
+     * During grace periods, error reporting is suppressed to avoid false positives.
+     */
+    private isInAnyGracePeriod(): boolean {
+        return this.appLifecycle.isInLaunchGracePeriod() ||
+               this.cdpClient.getConnectionLifecycle().isInConnectionGracePeriod();
     }
 
     async getClient(): Promise<unknown> {
@@ -228,8 +243,8 @@ export class YandexMusicController {
         maxAttempts: number = RETRY_CONFIG.MAX_ATTEMPTS,
         initialDelayMs: number = RETRY_CONFIG.INITIAL_DELAY_MS
     ): Promise<T | null> {
-        // Increase attempts if in launch grace period
-        const effectiveAttempts = this.appLifecycle.isInLaunchGracePeriod()
+        // Increase attempts if in any grace period
+        const effectiveAttempts = this.isInAnyGracePeriod()
             ? Math.max(maxAttempts, RETRY_CONFIG.GRACE_PERIOD_MIN_ATTEMPTS)
             : maxAttempts;
 
@@ -255,10 +270,14 @@ export class YandexMusicController {
             }
         }
 
-        // Only log error if not in grace period
-        if (!this.appLifecycle.isInLaunchGracePeriod()) {
+        // Only log error if not in any grace period
+        if (!this.isInAnyGracePeriod()) {
+            const cdpStatus = this.cdpClient.isConnected() ? 'connected' : 'disconnected';
+            const connectionTime = this.cdpClient.getConnectionLifecycle().getTimeSinceConnection();
             logger.error(
-                `${operationName} failed after ${effectiveAttempts} attempts`,
+                `${operationName} failed after ${effectiveAttempts} attempts. ` +
+                `CDP status: ${cdpStatus} (${connectionTime}ms since connection). ` +
+                `If CDP is connected but operation fails, DOM selectors may be outdated.`,
                 lastError
             );
         }

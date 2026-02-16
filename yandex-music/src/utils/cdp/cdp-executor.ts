@@ -7,7 +7,10 @@ import type { CDPClient, EvaluateOptions } from '../types/cdp.types';
 import { logger } from '../core/logger';
 
 export class CDPExecutor {
-    constructor(private getClient: () => CDPClient | null) {}
+    constructor(
+        private getClient: () => CDPClient | null,
+        private isInGracePeriod?: () => boolean
+    ) {}
 
     /**
      * Evaluates JavaScript expression and returns typed result.
@@ -32,10 +35,12 @@ export class CDPExecutor {
             });
 
             if (result.exceptionDetails) {
-                logger.error(
-                    'CDP evaluation exception',
-                    result.exceptionDetails.exception?.description
-                );
+                if (!this.isInGracePeriod?.()) {
+                    logger.error(
+                        'CDP evaluation exception',
+                        result.exceptionDetails.exception?.description
+                    );
+                }
                 return null;
             }
 
@@ -69,10 +74,12 @@ export class CDPExecutor {
             });
 
             if (result.exceptionDetails) {
-                logger.error(
-                    'CDP evaluation exception',
-                    result.exceptionDetails.exception?.description
-                );
+                if (!this.isInGracePeriod?.()) {
+                    logger.error(
+                        'CDP evaluation exception',
+                        result.exceptionDetails.exception?.description
+                    );
+                }
                 return { success: false, value: null };
             }
 

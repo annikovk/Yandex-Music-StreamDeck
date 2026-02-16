@@ -15,6 +15,15 @@ interface TrackInfoResult {
     originalCoverUrl?: string;
     title?: string;
     artist?: string;
+    diagnostics?: {
+        playerBarFound: boolean;
+        coverFound: boolean;
+        titleFound: boolean;
+        artistFound: boolean;
+        coverClasses?: string;
+        titleClasses?: string;
+        artistClasses?: string;
+    };
 }
 
 interface TrackTimeResult {
@@ -28,7 +37,10 @@ interface TrackTimeResult {
 }
 
 export class TrackInfoExtractor {
-    constructor(private cdpExecutor: CDPExecutor) {}
+    constructor(
+        private cdpExecutor: CDPExecutor,
+        private isInGracePeriod?: () => boolean
+    ) {}
 
     /**
      * Gets current track information (cover, title, artist).
@@ -40,11 +52,17 @@ export class TrackInfoExtractor {
                 (function() {
                     try {
                         let playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}");
+                        let playerBarFound = !!playerBar;
                         if (!playerBar) {
                             playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                            playerBarFound = !!playerBar;
                             if (!playerBar) {
                                 console.log("Player bar not found");
-                                return { success: false, message: 'Player bar not found' };
+                                return {
+                                    success: false,
+                                    message: 'Player bar not found',
+                                    diagnostics: { playerBarFound: false, coverFound: false, titleFound: false, artistFound: false }
+                                };
                             }
                         }
 
@@ -74,8 +92,26 @@ export class TrackInfoExtractor {
                                 artist: artist
                             };
                         } else {
-                            console.log("Track info not found");
-                            return { success: false, message: 'Track info not found' };
+                            // Gather diagnostic info
+                            const diagnostics = {
+                                playerBarFound: playerBarFound,
+                                coverFound: !!coverImg,
+                                titleFound: !!titleElement,
+                                artistFound: !!artistElement,
+                                coverClasses: coverImg ? coverImg.className : (playerBar.querySelector('img') ? playerBar.querySelector('img').className : 'no img found'),
+                                titleClasses: titleElement ? titleElement.className : 'not found',
+                                artistClasses: artistElement ? artistElement.className : 'not found'
+                            };
+                            console.log("Track info not found. Diagnostics:", diagnostics);
+                            return {
+                                success: false,
+                                message: 'Track info incomplete: ' + JSON.stringify({
+                                    cover: !!coverImg,
+                                    title: !!titleElement,
+                                    artist: !!artistElement
+                                }),
+                                diagnostics: diagnostics
+                            };
                         }
                     } catch (err) {
                         return { success: false, message: 'Error: ' + err.message };
@@ -93,6 +129,18 @@ export class TrackInfoExtractor {
                     title: result.title,
                     artist: result.artist,
                 };
+            }
+
+            // Log diagnostic information when track info fails (only if not in grace period)
+            if (!this.isInGracePeriod?.()) {
+                if (result?.diagnostics) {
+                    logger.error(
+                        "Track info extraction afailed - CDP connected but DOM elements not found. " +
+                        "Diagnostics: " + JSON.stringify(result.diagnostics, null, 2)
+                    );
+                } else if (result?.message) {
+                    logger.error("Track info extraction failed: " + result.message);
+                }
             }
 
             return null;
@@ -155,11 +203,15 @@ export class TrackInfoExtractor {
                     progressPercent: result.progressPercent ?? 0,
                 };
             } else {
-                logger.error("Failed to get track time: " + (result?.message || 'Unknown error'));
+                if (!this.isInGracePeriod?.()) {
+                    logger.error("Failed to get track time: " + (result?.message || 'Unknown error'));
+                }
                 return null;
             }
         } catch (error: unknown) {
-            logger.error("Error getting track time", error);
+            if (!this.isInGracePeriod?.()) {
+                logger.error("Error getting track time", error);
+            }
             return null;
         }
     }

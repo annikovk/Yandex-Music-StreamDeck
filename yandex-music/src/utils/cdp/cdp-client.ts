@@ -7,6 +7,7 @@ import CDP from "chrome-remote-interface";
 import type { CDPClient } from '../types/cdp.types';
 import { CDP_CONFIG } from '../constants/config';
 import { logger } from '../core/logger';
+import { ConnectionLifecycleManager } from './connection-lifecycle';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
@@ -16,6 +17,7 @@ export class CDPClientManager {
     private connectionPromise: Promise<CDPClient> | null = null;
     private state: ConnectionState = 'disconnected';
     private onDisconnectCallback?: () => void;
+    private connectionLifecycle = new ConnectionLifecycleManager();
 
     /**
      * Sets the CDP port number.
@@ -84,6 +86,13 @@ export class CDPClientManager {
     }
 
     /**
+     * Gets the connection lifecycle manager.
+     */
+    getConnectionLifecycle(): ConnectionLifecycleManager {
+        return this.connectionLifecycle;
+    }
+
+    /**
      * Resets connection state for reconnection attempts.
      */
     resetConnection(): void {
@@ -104,6 +113,7 @@ export class CDPClientManager {
                 logger.error("Error closing CDP connection", error);
             } finally {
                 this.resetConnection();
+                this.connectionLifecycle.resetConnectionState();
             }
         }
     }
@@ -139,12 +149,14 @@ export class CDPClientManager {
             client.on("disconnect", () => {
                 logger.info("CDP connection lost");
                 this.resetConnection();
+                this.connectionLifecycle.resetConnectionState();
                 this.onDisconnectCallback?.();
             });
 
             this.client = client;
             this.state = 'connected';
             logger.info("CDP connection established successfully");
+            this.connectionLifecycle.markConnectionEstablished();
 
             return client;
         } catch (error: unknown) {
