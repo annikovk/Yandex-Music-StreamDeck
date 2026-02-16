@@ -117,10 +117,6 @@ export class PlayerStateQuery {
                 `
             );
 
-            if (result?.debug) {
-                logger.info(`Like state check: ${result.isLiked} (method: ${result.debug})`);
-            }
-
             return result?.isLiked ?? false;
         } catch (error: unknown) {
             logger.error("Error checking like state", error);
@@ -172,10 +168,6 @@ export class PlayerStateQuery {
                 })()
                 `
             );
-
-            if (result?.debug) {
-                logger.info(`Mute state check: ${result.isMuted} (method: ${result.debug})`);
-            }
 
             return result?.isMuted ?? false;
         } catch (error: unknown) {

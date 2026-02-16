@@ -1,0 +1,251 @@
+/**
+ * Stream Deck Property Inspector CSS
+ * Based on official Elgato SDPI guidelines
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    user-select: none;
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #2d2d2d;
+    color: #d0d0d0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sdpi-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.sdpi-item {
+    display: flex;
+    align-items: stretch;
+    min-height: 32px;
+    padding: 8px 15px;
+}
+
+.sdpi-item + .sdpi-item {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sdpi-item[type="group"] {
+    padding-top: 0;
+}
+
+.sdpi-item-label {
+    display: flex;
+    align-items: center;
+    flex: 0 0 40%;
+    font-size: 9pt;
+    color: #9a9a9a;
+    padding-right: 15px;
+    line-height: 1.4;
+}
+
+.sdpi-item-label.empty {
+    flex: 0 0 0;
+}
+
+.sdpi-item-value {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+/* Input fields */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+textarea,
+select {
+    width: 100%;
+    padding: 6px 8px;
+    background-color: #3d3d3d;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    color: #d0d0d0;
+    font-family: inherit;
+    font-size: 9pt;
+    outline: none;
+}
+
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="password"]:hover,
+textarea:hover,
+select:hover {
+    border-color: #6a6a6a;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    border-color: #77b0e8;
+    background-color: #414141;
+}
+
+input::placeholder {
+    color: #6a6a6a;
+}
+
+/* Buttons */
+button {
+    padding: 6px 16px;
+    background: linear-gradient(to bottom, #5a5a5a 0%, #4a4a4a 100%);
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #d0d0d0;
+    font-family: inherit;
+    font-size: 9pt;
+    cursor: pointer;
+    outline: none;
+    min-height: 28px;
+}
+
+button:hover {
+    background: linear-gradient(to bottom, #6a6a6a 0%, #5a5a5a 100%);
+    border-color: #4a4a4a;
+}
+
+button:active {
+    background: linear-gradient(to bottom, #4a4a4a 0%, #3a3a3a 100%);
+    border-color: #2a2a2a;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Details (collapsible sections) */
+details {
+    margin: 0;
+    padding: 8px 0;
+}
+
+details summary {
+    cursor: pointer;
+    padding: 6px 8px;
+    background-color: #3a3a3a;
+    border-radius: 4px;
+    outline: none;
+    list-style: none;
+    user-select: none;
+    font-weight: 500;
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.2s;
+    font-size: 8pt;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details summary:hover {
+    background-color: #424242;
+}
+
+details > *:not(summary) {
+    padding: 8px 8px 0 8px;
+}
+
+/* Message boxes */
+.message {
+    padding: 0;
+}
+
+.message.info summary {
+    background-color: rgba(33, 150, 243, 0.15);
+    color: #90caf9;
+}
+
+.message.warning summary {
+    background-color: rgba(255, 152, 0, 0.15);
+    color: #ffb74d;
+}
+
+.message.error summary {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #e57373;
+}
+
+.message.success summary {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #81c784;
+}
+
+/* Checkboxes and radios */
+input[type="checkbox"],
+input[type="radio"] {
+    margin: 0 8px 0 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Select dropdowns */
+select {
+    cursor: pointer;
+    appearance: none;
+    padding-right: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239a9a9a' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
+select option {
+    background-color: #3d3d3d;
+    color: #d0d0d0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}

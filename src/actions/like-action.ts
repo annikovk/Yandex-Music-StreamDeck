@@ -57,12 +57,10 @@ export class LikeAction extends SingletonAction {
         try {
             const isLiked = await yandexMusicController.isLiked();
             const targetState = isLiked ? 1 : 0;
-            streamDeck.logger.info(`[Like] Updating states: isLiked=${isLiked}, targetState=${targetState}, contexts=${this.contexts.size}`);
 
             for (const contextId of this.contexts) {
                 const action = this.actions.find((a) => a.id === contextId);
                 if (action && "setState" in action) {
-                    streamDeck.logger.info(`[Like] Setting state to ${targetState} for context ${contextId}`);
                     await (action as any).setState(targetState);
                 } else {
                     streamDeck.logger.warn(`[Like] Action not found or no setState for context ${contextId}`);

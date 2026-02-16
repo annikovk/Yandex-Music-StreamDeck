@@ -1,7 +1,8 @@
 {
 	"Name": "Yandex Music",
-	"Version": "1.0.5.1",
+	"Version": "1.0.6",
 	"Author": "Konstantin Annikov",
+	"PropertyInspectorPath": "ui/global-settings.html",
 	"Actions": [
 		{
 			"Name": "Play/Pause",

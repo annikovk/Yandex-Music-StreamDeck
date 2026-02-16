@@ -57,12 +57,10 @@ export class MuteAction extends SingletonAction {
         try {
             const isMuted = await yandexMusicController.isMuted();
             const targetState = isMuted ? 1 : 0;
-            streamDeck.logger.info(`[Mute] Updating states: isMuted=${isMuted}, targetState=${targetState}, contexts=${this.contexts.size}`);
 
             for (const contextId of this.contexts) {
                 const action = this.actions.find((a) => a.id === contextId);
                 if (action && "setState" in action) {
-                    streamDeck.logger.info(`[Mute] Setting state to ${targetState} for context ${contextId}`);
                     await (action as any).setState(targetState);
                 } else {
                     streamDeck.logger.warn(`[Mute] Action not found or no setState for context ${contextId}`);

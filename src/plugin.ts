@@ -12,9 +12,10 @@ import { setInstallationId } from "./utils/core/installation-id";
 import { logAndReportError } from "./utils/telemetry/error-reporter";
 import { installationReporter } from "./utils/telemetry/installation-reporter";
 import type { StreamDeckInfo } from "./utils/types/analytics.types";
+import type { PluginGlobalSettings } from "./types/settings";
 
 async function initializeInstallationId(): Promise<string> {
-    const settings = await streamDeck.settings.getGlobalSettings() as { installation_id?: string };
+    const settings = await streamDeck.settings.getGlobalSettings() as PluginGlobalSettings;
 
     if (settings.installation_id) {
         streamDeck.logger.info("Loaded existing installation_id:", settings.installation_id);

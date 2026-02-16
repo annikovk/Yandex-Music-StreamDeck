@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Yandex Music Settings</title>
+    <link rel="stylesheet" href="sdpi.css">
+    <style>
+        /* Compact single-row layout */
+        .sdpi-item {
+            display: flex;
+            align-items: stretch;
+            min-height: 32px;
+            padding: 8px 15px;
+        }
+
+        .sdpi-item-label {
+            flex: 0 0 20%; /* Reduced from default 40% to give more space to input */
+        }
+
+        .sdpi-item-value.flex-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .path-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #customPath {
+            width: 100%;
+            padding-right: 28px; /* Space for clear button */
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9a9a9a;
+            cursor: pointer;
+            padding: 4px;
+            display: none;
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0.6;
+            min-height: auto;
+        }
+
+        .clear-btn:hover {
+            opacity: 1;
+            color: #d0d0d0;
+            background: none;
+        }
+
+        .path-input-wrapper:hover .clear-btn,
+        #customPath:focus ~ .clear-btn {
+            display: block;
+        }
+
+        .path-input-wrapper.has-value .clear-btn {
+            display: block;
+        }
+
+        .help-btn {
+            background: none;
+            border: none;
+            color: #6a6a6a;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            min-height: auto;
+            vertical-align: middle;
+        }
+
+        .help-btn:hover {
+            color: #d0d0d0;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .help-btn.active {
+            color: #77b0e8;
+            background: rgba(119, 176, 232, 0.15);
+        }
+
+        #browseBtn {
+            min-width: 32px;
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #browseBtn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        #instructions {
+            display: none;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #instructions.visible {
+            display: block;
+        }
+
+        #instructions ul {
+            margin: 4px 0;
+            padding-left: 20px;
+        }
+
+        #instructions li {
+            margin: 4px 0;
+        }
+
+        #instructions code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 8pt;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+        }
+
+        #status {
+            padding: 8px 12px;
+            margin-top: 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+            display: none;
+        }
+
+        #status.success {
+            background: rgba(0, 200, 83, 0.15);
+            color: #00c853;
+        }
+
+        #status.error {
+            background: rgba(255, 87, 34, 0.15);
+            color: #ff5722;
+        }
+
+        #status.info {
+            background: rgba(33, 150, 243, 0.15);
+            color: #2196f3;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Status container */
+        #statusContainer {
+            padding-top: 0;
+        }
+
+        #instructionsContainer {
+            padding-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="sdpi-wrapper">
+        <!-- Single row: Label + Help + Path + Browse -->
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">
+                Yandex Music Path
+                <button class="help-btn" id="helpBtn" onclick="toggleHelp()" title="Show help">?</button>
+            </div>
+            <div class="sdpi-item-value flex-row">
+                <div class="path-input-wrapper" id="pathWrapper">
+                    <input
+                        id="customPath"
+                        type="text"
+                        placeholder="Auto-detect"
+                        oninput="handlePathInput()"
+                    >
+                    <button class="clear-btn" onclick="clearPath()" title="Clear path">×</button>
+                </div>
+                <button id="browseBtn" onclick="browsePath()" title="Browse for executable">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Instructions (hidden by default, shown when help clicked) -->
+        <div class="sdpi-item" id="instructionsContainer" style="display: none;">
+            <div class="sdpi-item-label empty"></div>
+            <div class="sdpi-item-value">
+                <div id="instructions"></div>
+            </div>
+        </div>
+
+        <!-- Status message -->
+        <div class="sdpi-item" id="statusContainer" style="display: none;">
+            <div class="sdpi-item-label empty"></div>
+            <div class="sdpi-item-value">
+                <div id="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput">
+
+    <script>
+        // Global variables
+        let websocket = null;
+        let uuid = null;
+        let inInfo = null;
+        let actionInfo = null;
+        let settingsModel = {};
+        const platform = navigator.platform.toLowerCase();
+        const isMac = platform.includes('mac');
+        const isWindows = platform.includes('win');
+
+        // Connect to Stream Deck
+        function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+            uuid = inUUID;
+            inInfo = JSON.parse(inInfo);
+            actionInfo = JSON.parse(inActionInfo);
+
+            websocket = new WebSocket('ws://127.0.0.1:' + inPort);
+
+            websocket.onopen = function() {
+                const json = {
+                    event: inRegisterEvent,
+                    uuid: inUUID
+                };
+                websocket.send(JSON.stringify(json));
+                requestGlobalSettings();
+            };
+
+            websocket.onmessage = function(evt) {
+                const jsonObj = JSON.parse(evt.data);
+                const event = jsonObj.event;
+                const jsonPayload = jsonObj.payload;
+
+                if (event === 'didReceiveGlobalSettings') {
+                    settingsModel = jsonPayload.settings;
+                    loadSettings();
+                }
+            };
+
+            websocket.onerror = function(evt) {
+                console.error('WebSocket error:', evt);
+            };
+        }
+
+        // Request global settings
+        function requestGlobalSettings() {
+            if (websocket && websocket.readyState === 1) {
+                const json = {
+                    event: 'getGlobalSettings',
+                    context: uuid
+                };
+                websocket.send(JSON.stringify(json));
+            }
+        }
+
+        // Save global settings
+        function saveGlobalSettings() {
+            if (websocket && websocket.readyState === 1) {
+                const json = {
+                    event: 'setGlobalSettings',
+                    context: uuid,
+                    payload: settingsModel
+                };
+                websocket.send(JSON.stringify(json));
+            }
+        }
+
+        // Toggle help instructions
+        function toggleHelp() {
+            const instructions = document.getElementById('instructions');
+            const instructionsContainer = document.getElementById('instructionsContainer');
+            const helpBtn = document.getElementById('helpBtn');
+            const isVisible = instructions.classList.contains('visible');
+
+            if (isVisible) {
+                instructions.classList.remove('visible');
+                instructionsContainer.style.display = 'none';
+                helpBtn.classList.remove('active');
+            } else {
+                instructions.classList.add('visible');
+                instructionsContainer.style.display = 'flex';
+                helpBtn.classList.add('active');
+            }
+        }
+
+        // Initialize UI based on platform
+        function initializeUI() {
+            // Set file input accept attribute
+            const fileInput = document.getElementById('fileInput');
+            if (isMac) {
+                fileInput.setAttribute('accept', '.app');
+            } else if (isWindows) {
+                fileInput.setAttribute('accept', '.exe');
+            }
+
+            // Set instructions
+            const instructionsDiv = document.getElementById('instructions');
+            if (isMac) {
+                instructionsDiv.innerHTML = `
+                    <ul>
+                        <li>Leave empty to use automatic detection</li>
+                        <li>Click <strong>Browse...</strong> to select the app manually</li>
+                        <li>Default location: <code>/Applications/Яндекс Музыка.app</code></li>
+                        <li>Look for <code>Яндекс Музыка.app</code> in Applications folder</li>
+                        <li>Changes apply on next action button press</li>
+                    </ul>
+                `;
+            } else if (isWindows) {
+                instructionsDiv.innerHTML = `
+                    <ul>
+                        <li>Leave empty to use automatic detection</li>
+                        <li>Click <strong>Browse...</strong> to select the executable manually</li>
+                        <li>Common locations:
+                            <ul>
+                                <li><code>%LOCALAPPDATA%\\Programs\\YandexMusic\\Яндекс Музыка.exe</code></li>
+                                <li><code>C:\\Program Files\\YandexMusic\\YandexMusic.exe</code></li>
+                            </ul>
+                        </li>
+                        <li>Look for <code>Яндекс Музыка.exe</code> or <code>YandexMusic.exe</code></li>
+                        <li>Changes apply on next action button press</li>
+                    </ul>
+                `;
+            } else {
+                instructionsDiv.innerHTML = `
+                    <p>Custom path configuration is available for Windows and macOS.</p>
+                `;
+            }
+        }
+
+        // Update clear button visibility
+        function updateClearButton() {
+            const pathInput = document.getElementById('customPath');
+            const pathWrapper = document.getElementById('pathWrapper');
+
+            if (pathInput.value.trim()) {
+                pathWrapper.classList.add('has-value');
+            } else {
+                pathWrapper.classList.remove('has-value');
+            }
+        }
+
+        // Decode path for display (handles URL-encoded characters)
+        function decodePath(path) {
+            if (!path) return '';
+            try {
+                // Decode URI components (e.g., %D0%AF%D0%BD%D0%B4%D0%B5%D0%BA%D1%81 -> Яндекс)
+                return decodeURIComponent(path);
+            } catch (e) {
+                // If decoding fails, return original path
+                return path;
+            }
+        }
+
+        // Load settings into UI
+        function loadSettings() {
+            const pathInput = document.getElementById('customPath');
+            if (settingsModel.customExecutablePath) {
+                // Decode path for readable display
+                pathInput.value = decodePath(settingsModel.customExecutablePath);
+            } else {
+                pathInput.value = '';
+            }
+            updateClearButton();
+        }
+
+        // Handle path input changes
+        let saveTimeout;
+        function handlePathInput() {
+            updateClearButton();
+
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                const pathInput = document.getElementById('customPath');
+                const newPath = pathInput.value.trim();
+
+                if (newPath) {
+                    settingsModel.customExecutablePath = newPath;
+                    showStatus('Path saved', 'success');
+                } else {
+                    delete settingsModel.customExecutablePath;
+                    showStatus('Using automatic detection', 'info');
+                }
+
+                saveGlobalSettings();
+            }, 1000);
+        }
+
+        // Browse for path
+        function browsePath() {
+            const fileInput = document.getElementById('fileInput');
+            fileInput.click();
+        }
+
+        // Clear path
+        function clearPath() {
+            const pathInput = document.getElementById('customPath');
+            pathInput.value = '';
+            delete settingsModel.customExecutablePath;
+            saveGlobalSettings();
+            updateClearButton();
+            showStatus('Path cleared. Using automatic detection.', 'info');
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const statusContainer = document.getElementById('statusContainer');
+
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+            statusContainer.style.display = 'flex';
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+                statusContainer.style.display = 'none';
+            }, 3000);
+        }
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const pathInput = document.getElementById('customPath');
+                // In Electron/Stream Deck context, file.path should be available
+                const fullPath = file.path || file.name;
+
+                // Store the path as-is (decoded/readable format)
+                pathInput.value = decodePath(fullPath);
+                settingsModel.customExecutablePath = pathInput.value;
+
+                saveGlobalSettings();
+                updateClearButton();
+                showStatus('Path selected and saved', 'success');
+            }
+        });
+
+        // Initialize UI on load
+        initializeUI();
+    </script>
+</body>
+</html>

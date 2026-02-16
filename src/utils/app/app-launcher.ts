@@ -27,16 +27,17 @@ export class AppLauncher {
 
     /**
      * Launches the application for the current platform.
+     * @param customPath - Optional custom executable path (supports both macOS and Windows)
      */
-    async launch(): Promise<boolean> {
+    async launch(customPath?: string): Promise<boolean> {
         const platform = process.platform;
         logger.info(`Launching Yandex Music on platform: ${platform}`);
 
         try {
             if (platform === 'darwin') {
-                return await this.launchMacOS();
+                return await this.launchMacOS(customPath);
             } else if (platform === 'win32') {
-                return await this.launchWindows();
+                return await this.launchWindows(customPath);
             } else {
                 logger.error(`Unsupported platform: ${platform}`);
                 return false;
@@ -49,10 +50,11 @@ export class AppLauncher {
 
     /**
      * Launches Yandex Music on macOS.
+     * @param customPath - Optional custom executable path
      */
-    private async launchMacOS(): Promise<boolean> {
+    private async launchMacOS(customPath?: string): Promise<boolean> {
         try {
-            const appPath = await this.appDetector.detectMacOSAppPath();
+            const appPath = await this.appDetector.detectAppPath(customPath);
             if (!appPath) {
                 logger.error(
                     "Yandex Music not found. Please install from https://music.yandex.ru/download/"
@@ -80,8 +82,9 @@ export class AppLauncher {
 
     /**
      * Launches Yandex Music on Windows.
+     * @param customPath - Optional custom executable path
      */
-    private async launchWindows(): Promise<boolean> {
+    private async launchWindows(customPath?: string): Promise<boolean> {
         try {
             // Kill existing process
             await this.killExistingProcess(
@@ -89,9 +92,9 @@ export class AppLauncher {
                 'taskkill /F /IM "Яндекс Музыка.exe" 2>nul || taskkill /F /IM "YandexMusic.exe" 2>nul'
             );
 
-            // Find app path
+            // Find app path (using custom path if provided)
             logger.info("Finding Yandex Music installation (Windows)...");
-            const appPath = await this.appDetector.detectWindowsAppPath();
+            const appPath = await this.appDetector.detectAppPath(customPath);
 
             if (!appPath) {
                 logger.error(

@@ -6,6 +6,7 @@
 import { CDP_CONFIG, RETRY_CONFIG } from './constants/config';
 import { logger } from './core/logger';
 import type { TrackInfo, TrackTime } from './types/yandex-music.types';
+import { getCustomExecutablePath } from './core/settings';
 
 // CDP modules
 import { CDPClientManager } from './cdp/cdp-client';
@@ -151,7 +152,13 @@ export class YandexMusicController {
         // Mark app as launching
         this.appLifecycle.markAppLaunched();
 
-        const launched = await this.appLauncher.launch();
+        // Retrieve custom executable path from settings
+        const customPath = await getCustomExecutablePath();
+        if (customPath) {
+            logger.info(`Using custom executable path: ${customPath}`);
+        }
+
+        const launched = await this.appLauncher.launch(customPath);
         if (!launched) {
             this.appLifecycle.resetLaunchState();
             return false;
