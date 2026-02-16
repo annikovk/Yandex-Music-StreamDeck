@@ -178,12 +178,71 @@
         #instructionsContainer {
             padding-top: 0;
         }
+
+        /* Warning message */
+        .warning-message {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 9pt;
+            line-height: 1.5;
+            border-left: 3px solid #ff9800;
+            margin-bottom: 8px;
+        }
+
+        .warning-message strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .configure-link {
+            color: #77b0e8;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .configure-link:hover {
+            color: #90caf9;
+        }
+
+        .success-message {
+            background: rgba(0, 200, 83, 0.15);
+            color: #81c784;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 9pt;
+            line-height: 1.5;
+            border-left: 3px solid #4caf50;
+        }
+
+        .success-message strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        #pathSection {
+            display: none;
+        }
+
+        #pathSection.visible {
+            display: flex;
+        }
     </style>
 </head>
 <body>
     <div class="sdpi-wrapper">
+        <!-- Status/Warning message -->
+        <div class="sdpi-item" id="statusSection">
+            <div class="sdpi-item-label empty"></div>
+            <div class="sdpi-item-value">
+                <div id="detectionStatus"></div>
+            </div>
+        </div>
+
         <!-- Single row: Label + Help + Path + Browse -->
-        <div class="sdpi-item">
+        <div class="sdpi-item" id="pathSection">
             <div class="sdpi-item-label">
                 Yandex Music Path
                 <button class="help-btn" id="helpBtn" onclick="toggleHelp()" title="Show help">?</button>
@@ -379,6 +438,77 @@
             }
         }
 
+        // Update UI based on detection status
+        function updateDetectionStatus() {
+            const statusDiv = document.getElementById('detectionStatus');
+            const pathSection = document.getElementById('pathSection');
+            const hasCustomPath = !!settingsModel.customExecutablePath;
+            const detectionFailed = settingsModel.autoDetectionFailed === true;
+            const detectionSucceeded = settingsModel.autoDetectionSucceeded === true;
+
+            // If user has set a custom path, always show the path section
+            if (hasCustomPath) {
+                pathSection.classList.add('visible');
+                statusDiv.innerHTML = `
+                    <div class="success-message">
+                        <strong>✓ Custom Path Configured</strong>
+                        Using your manually specified executable path.
+                    </div>
+                `;
+                return;
+            }
+
+            // If auto-detection failed, show warning and path section
+            if (detectionFailed) {
+                pathSection.classList.add('visible');
+                statusDiv.innerHTML = `
+                    <div class="warning-message">
+                        <strong>⚠️ Yandex Music Not Found</strong>
+                        Automatic detection failed. Please specify the executable path manually.
+                    </div>
+                `;
+                return;
+            }
+
+            // If auto-detection succeeded, show success message
+            if (detectionSucceeded) {
+                pathSection.classList.remove('visible');
+                statusDiv.innerHTML = `
+                    <div class="success-message">
+                        <strong>✓ Auto-Detection Successful</strong>
+                        Yandex Music was found and launched successfully.
+                        <span class="configure-link" onclick="showPathSection()">Configure path manually</span>
+                    </div>
+                `;
+                return;
+            }
+
+            // Default state: auto-detection not yet attempted
+            pathSection.classList.remove('visible');
+            statusDiv.innerHTML = `
+                <div class="success-message">
+                    <strong>✓ Auto-Detection Active</strong>
+                    Plugin will automatically locate Yandex Music on first use.
+                    <span class="configure-link" onclick="showPathSection()">Configure path manually</span>
+                </div>
+            `;
+        }
+
+        // Show path section manually
+        function showPathSection() {
+            const pathSection = document.getElementById('pathSection');
+            pathSection.classList.add('visible');
+
+            // Update status message
+            const statusDiv = document.getElementById('detectionStatus');
+            statusDiv.innerHTML = `
+                <div class="success-message">
+                    <strong>Manual Configuration</strong>
+                    Leave empty to return to automatic detection.
+                </div>
+            `;
+        }
+
         // Load settings into UI
         function loadSettings() {
             const pathInput = document.getElementById('customPath');
@@ -389,6 +519,7 @@
                 pathInput.value = '';
             }
             updateClearButton();
+            updateDetectionStatus();
         }
 
         // Handle path input changes
@@ -403,6 +534,8 @@
 
                 if (newPath) {
                     settingsModel.customExecutablePath = newPath;
+                    // Clear detection failed flag if user sets a path
+                    delete settingsModel.autoDetectionFailed;
                     showStatus('Path saved', 'success');
                 } else {
                     delete settingsModel.customExecutablePath;
@@ -410,6 +543,7 @@
                 }
 
                 saveGlobalSettings();
+                updateDetectionStatus();
             }, 1000);
         }
 
@@ -426,6 +560,7 @@
             delete settingsModel.customExecutablePath;
             saveGlobalSettings();
             updateClearButton();
+            updateDetectionStatus();
             showStatus('Path cleared. Using automatic detection.', 'info');
         }
 
@@ -457,8 +592,12 @@
                 pathInput.value = decodePath(fullPath);
                 settingsModel.customExecutablePath = pathInput.value;
 
+                // Clear detection failed flag if user sets a path
+                delete settingsModel.autoDetectionFailed;
+
                 saveGlobalSettings();
                 updateClearButton();
+                updateDetectionStatus();
                 showStatus('Path selected and saved', 'success');
             }
         });

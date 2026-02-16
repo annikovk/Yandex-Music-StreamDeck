@@ -13,6 +13,7 @@ import { logAndReportError } from "./utils/telemetry/error-reporter";
 import { installationReporter } from "./utils/telemetry/installation-reporter";
 import type { StreamDeckInfo } from "./utils/types/analytics.types";
 import type { PluginGlobalSettings } from "./types/settings";
+import { getCustomExecutablePath, setAutoDetectionSucceeded } from "./utils/core/settings";
 
 async function initializeInstallationId(): Promise<string> {
     const settings = await streamDeck.settings.getGlobalSettings() as PluginGlobalSettings;
@@ -53,8 +54,15 @@ streamDeck.logger.info("Installation ID initialized:", installationId);
 // Try to connect to CDP if app is already running (non-fatal)
 await yandexMusicController
     .connect()
-    .then(() => {
+    .then(async () => {
         streamDeck.logger.info("CDP connection established - Yandex Music is already running");
+
+        // Mark auto-detection as successful if no custom path is set
+        const customPath = await getCustomExecutablePath();
+        if (!customPath) {
+            await setAutoDetectionSucceeded(true);
+            streamDeck.logger.info("Auto-detection marked as successful (app was already running)");
+        }
     })
     .catch(() => {
         // This is expected if the app isn't running yet - it will be launched when needed

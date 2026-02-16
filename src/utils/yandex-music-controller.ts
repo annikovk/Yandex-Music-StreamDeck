@@ -6,7 +6,7 @@
 import { CDP_CONFIG, RETRY_CONFIG } from './constants/config';
 import { logger } from './core/logger';
 import type { TrackInfo, TrackTime } from './types/yandex-music.types';
-import { getCustomExecutablePath } from './core/settings';
+import { getCustomExecutablePath, setAutoDetectionFailed, setAutoDetectionSucceeded } from './core/settings';
 
 // CDP modules
 import { CDPClientManager } from './cdp/cdp-client';
@@ -161,6 +161,14 @@ export class YandexMusicController {
         const launched = await this.appLauncher.launch(customPath);
         if (!launched) {
             this.appLifecycle.resetLaunchState();
+
+            // Only set detection failed flag if no custom path was provided
+            // (if custom path is set and fails, it's a different issue)
+            if (!customPath) {
+                await setAutoDetectionFailed(true);
+                logger.error("Auto-detection failed. User should configure path manually in plugin settings.");
+            }
+
             return false;
         }
 
@@ -170,6 +178,15 @@ export class YandexMusicController {
             if (!this.isConnected()) {
                 this.appLifecycle.resetLaunchState();
                 return false;
+            }
+
+            // Launch succeeded - update detection status
+            await setAutoDetectionFailed(false);
+
+            // If no custom path was used, mark auto-detection as successful
+            if (!customPath) {
+                await setAutoDetectionSucceeded(true);
+                logger.info("Auto-detection succeeded - Yandex Music found and launched");
             }
 
             // Wait for UI to be ready after connection

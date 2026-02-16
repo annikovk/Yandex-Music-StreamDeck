@@ -18,6 +18,20 @@ export interface PluginGlobalSettings {
      *  - macOS: /Applications/Яндекс Музыка.app
      */
     customExecutablePath?: string;
+
+    /**
+     * Flag indicating whether automatic app detection failed.
+     * Set to true when the plugin cannot find Yandex Music at default locations.
+     * Used by Property Inspector to show appropriate warnings.
+     */
+    autoDetectionFailed?: boolean;
+
+    /**
+     * Flag indicating whether automatic app detection succeeded.
+     * Set to true when the plugin successfully found and launched Yandex Music.
+     * Used by Property Inspector to show success confirmation.
+     */
+    autoDetectionSucceeded?: boolean;
 }
 
 /**
