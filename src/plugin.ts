@@ -75,15 +75,39 @@ const streamDeckInfo: StreamDeckInfo = {
     plugin: streamDeck.info.plugin,
 };
 
+// Retrieve custom executable path from settings (if configured)
+const customExecutablePath = await getCustomExecutablePath();
+if (customExecutablePath) {
+    streamDeck.logger.info(`Custom executable path configured: ${customExecutablePath}`);
+}
+
+// Report initial installation info with platform-aware detection
 installationReporter
     .report(
         streamDeckInfo,
-        () => yandexMusicController.detectMacOSAppPath(),
         () => yandexMusicController.isConnected()
     )
     .then(() => {
-        streamDeck.logger.info("Installation info reported");
+        streamDeck.logger.info("Initial installation info reported");
     })
     .catch((err) => {
-        logAndReportError("Error reporting installation info", err);
+        logAndReportError("Error reporting initial installation info", err);
     });
+
+// Set up callback to report again on first successful connection
+// This helps track installations where the plugin is actually working
+yandexMusicController.onFirstConnection(() => {
+    streamDeck.logger.info("First connection aestablished, reporting to analytics");
+
+    installationReporter
+        .report(
+            streamDeckInfo,
+            () => yandexMusicController.isConnected()
+        )
+        .then(() => {
+            streamDeck.logger.info("Connection success installation info reported");
+        })
+        .catch((err) => {
+            logAndReportError("Error reporting connection installation info", err);
+        });
+});

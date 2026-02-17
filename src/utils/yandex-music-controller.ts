@@ -6,6 +6,7 @@
 import { CDP_CONFIG, RETRY_CONFIG } from './constants/config';
 import { logger } from './core/logger';
 import type { TrackInfo, TrackTime } from './types/yandex-music.types';
+import type { DetectionResult } from './app/app-detector';
 import { getCustomExecutablePath, setAutoDetectionFailed, setAutoDetectionSucceeded } from './core/settings';
 
 // CDP modules
@@ -14,7 +15,7 @@ import { CDPReconnectionManager } from './cdp/cdp-connection';
 import { CDPExecutor } from './cdp/cdp-executor';
 
 // App modules
-import { AppDetector } from './app/app-detector';
+import { appDetector } from './app/app-detector';
 import { AppLauncher } from './app/app-launcher';
 import { AppLifecycleManager } from './app/app-lifecycle';
 
@@ -30,7 +31,6 @@ export class YandexMusicController {
     private cdpExecutor: CDPExecutor;
 
     // App components
-    private appDetector: AppDetector;
     private appLauncher: AppLauncher;
     private appLifecycle: AppLifecycleManager;
 
@@ -38,6 +38,10 @@ export class YandexMusicController {
     private playerControls: PlayerControls;
     private playerState: PlayerStateQuery;
     private trackInfo: TrackInfoExtractor;
+
+    // Connection tracking
+    private firstConnectionReported = false;
+    private onFirstConnectionCallback?: () => void;
 
     constructor() {
         // Initialize CDP components
@@ -49,8 +53,7 @@ export class YandexMusicController {
         );
 
         // Initialize app components
-        this.appDetector = new AppDetector();
-        this.appLauncher = new AppLauncher(this.appDetector, CDP_CONFIG.DEFAULT_PORT);
+        this.appLauncher = new AppLauncher(appDetector, CDP_CONFIG.DEFAULT_PORT);
         this.appLifecycle = new AppLifecycleManager();
 
         // Initialize DOM components
@@ -98,6 +101,12 @@ export class YandexMusicController {
         try {
             await this.cdpClient.connect();
             this.cdpReconnection.resetAttempts();
+
+            // Trigger first connection callback (once only)
+            if (!this.firstConnectionReported && this.onFirstConnectionCallback) {
+                this.firstConnectionReported = true;
+                this.onFirstConnectionCallback();
+            }
         } catch (error: unknown) {
             throw error;
         }
@@ -109,6 +118,14 @@ export class YandexMusicController {
 
     isConnected(): boolean {
         return this.cdpClient.isConnected();
+    }
+
+    /**
+     * Sets a callback to be invoked on first successful connection.
+     * Used for reporting successful installation to analytics.
+     */
+    onFirstConnection(callback: () => void): void {
+        this.onFirstConnectionCallback = callback;
     }
 
     /**
@@ -132,12 +149,14 @@ export class YandexMusicController {
 
     // ==================== App Detection ====================
 
-    async detectMacOSAppPath(): Promise<string | null> {
-        return this.appDetector.detectMacOSAppPath();
-    }
-
-    async detectWindowsAppPath(): Promise<string | null> {
-        return this.appDetector.detectWindowsAppPath();
+    /**
+     * Detects Yandex Music app path for the current platform.
+     * Delegates to AppDetector and returns enhanced detection result.
+     * @param customPath - Optional custom executable path from settings
+     * @returns Enhanced detection result with metadata
+     */
+    async detectAppPath(customPath?: string): Promise<DetectionResult> {
+        return appDetector.detectAppPath(customPath);
     }
 
     // ==================== App Lifecycle ====================

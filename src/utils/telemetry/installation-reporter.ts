@@ -8,23 +8,31 @@ import os from 'os';
 import { ANALYTICS_CONFIG } from '../constants/config';
 import { logger } from '../core/logger';
 import { getInstallationId } from '../core/installation-id';
+import { appDetector } from '../app/app-detector';
 import type { InstallationInfo, StreamDeckInfo } from '../types/analytics.types';
 
 export class InstallationReporter {
     /**
      * Reports plugin installation information to analytics endpoint.
      * This is called once when the plugin starts to collect telemetry.
-     *
-     * Takes detection functions as parameters for dependency injection.
      */
     async report(
         streamDeckInfo: StreamDeckInfo | undefined,
-        detectAppPath: () => Promise<string | null>,
         isConnected: () => boolean
     ): Promise<void> {
         try {
             // Detect Yandex Music installation
-            const yandexMusicPath = await detectAppPath();
+            const detectionResult = await appDetector.detectAppPath();
+
+            // Combine detection method with path for telemetry
+            let yandexMusicPath: string | null = null;
+            if (detectionResult.path) {
+                if (detectionResult.detectionMethod) {
+                    yandexMusicPath = `[${detectionResult.detectionMethod}] ${detectionResult.path}`;
+                } else {
+                    yandexMusicPath = detectionResult.path;
+                }
+            }
 
             // Check if app is connected
             const yandexMusicConnected = isConnected();

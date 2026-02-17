@@ -12,33 +12,75 @@ import { logger } from '../core/logger';
 
 const execAsync = promisify(exec);
 
+export interface DetectionResult {
+    success: boolean;
+    path: string | null;
+    detectionMethod?: 'custom' | 'standard-path' | 'registry' | 'powershell-search' | 'macos-default';
+    usedCustomPath: boolean;
+    error?: string;
+}
+
 export class AppDetector {
     /**
      * Detects Yandex Music installation path for the current platform.
      * @param customPath - Optional custom executable path (supports both macOS and Windows)
+     * @returns Enhanced detection result with metadata
      */
-    async detectAppPath(customPath?: string): Promise<string | null> {
+    async detectAppPath(customPath?: string): Promise<DetectionResult> {
         const platform = process.platform;
 
-        // Priority 1: Use custom path if provided and valid
-        if (customPath) {
-            const isValid = await this.validateCustomPath(customPath);
-            if (isValid) {
-                return customPath;
-            } else {
-                logger.warn('Custom executable path invalid, falling back to auto-detection');
+        try {
+            // Priority 1: Use custom path if provided and valid
+            if (customPath) {
+                const isValid = await this.validateCustomPath(customPath);
+                if (isValid) {
+                    return {
+                        success: true,
+                        path: customPath,
+                        detectionMethod: 'custom',
+                        usedCustomPath: true
+                    };
+                } else {
+                    logger.warn('Custom executable path invalid, falling back to auto-detection');
+                }
             }
-        }
 
-        // Priority 2: Fall back to automatic detection
-        if (platform === 'darwin') {
-            return this.detectMacOSAppPath();
-        } else if (platform === 'win32') {
-            return this.detectWindowsAppPath();
-        }
+            // Priority 2: Fall back to automatic detection
+            let detectedPath: string | null = null;
+            let method: DetectionResult['detectionMethod'];
 
-        logger.warn(`Unsupported platform: ${platform}`);
-        return null;
+            if (platform === 'darwin') {
+                detectedPath = await this.detectMacOSAppPath();
+                method = 'macos-default';
+            } else if (platform === 'win32') {
+                const result = await this.detectWindowsAppPathWithMethod();
+                detectedPath = result.path;
+                method = result.method;
+            } else {
+                logger.warn(`Unsupported platform: ${platform}`);
+                return {
+                    success: false,
+                    path: null,
+                    usedCustomPath: false,
+                    error: `Unsupported platform: ${platform}`
+                };
+            }
+
+            return {
+                success: detectedPath !== null,
+                path: detectedPath,
+                detectionMethod: method,
+                usedCustomPath: false
+            };
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            return {
+                success: false,
+                path: null,
+                usedCustomPath: false,
+                error: errorMessage
+            };
+        }
     }
 
     /**
@@ -79,6 +121,15 @@ export class AppDetector {
      * 3. PowerShell-based filesystem search
      */
     async detectWindowsAppPath(): Promise<string | null> {
+        const result = await this.detectWindowsAppPathWithMethod();
+        return result.path;
+    }
+
+    /**
+     * Internal helper that detects Windows app path and tracks which method succeeded.
+     * Used by the main detectAppPath() method to provide enhanced diagnostics.
+     */
+    private async detectWindowsAppPathWithMethod(): Promise<{ path: string | null; method: DetectionResult['detectionMethod'] }> {
         // Strategy 1: Check standard installation paths
         const possiblePaths = this.getWindowsPossiblePaths();
 
@@ -87,7 +138,7 @@ export class AppDetector {
             try {
                 await fs.access(appPath);
                 logger.info(`Found Yandex Music at: ${appPath}`);
-                return appPath;
+                return { path: appPath, method: 'standard-path' };
             } catch {
                 // File doesn't exist, try next path
             }
@@ -98,7 +149,7 @@ export class AppDetector {
         const registryPath = await this.detectFromWindowsRegistry();
         if (registryPath) {
             logger.info(`Found Yandex Music via Registry at: ${registryPath}`);
-            return registryPath;
+            return { path: registryPath, method: 'registry' };
         }
 
         // Strategy 3: PowerShell filesystem search as last resort
@@ -106,7 +157,7 @@ export class AppDetector {
         const searchPath = await this.detectViaWindowsSearch();
         if (searchPath) {
             logger.info(`Found Yandex Music via search at: ${searchPath}`);
-            return searchPath;
+            return { path: searchPath, method: 'powershell-search' };
         }
 
         logger.error(
@@ -114,7 +165,7 @@ export class AppDetector {
             `You can specify a custom path in plugin settings (Stream Deck → Plugin Settings). ` +
             `Searched standard paths: ${possiblePaths.join(', ')}`
         );
-        return null;
+        return { path: null, method: undefined };
     }
 
     /**
@@ -242,3 +293,6 @@ export class AppDetector {
         return null;
     }
 }
+
+// Export singleton instance
+export const appDetector = new AppDetector();

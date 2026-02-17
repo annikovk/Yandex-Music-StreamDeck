@@ -54,12 +54,19 @@ export class AppLauncher {
      */
     private async launchMacOS(customPath?: string): Promise<boolean> {
         try {
-            const appPath = await this.appDetector.detectAppPath(customPath);
-            if (!appPath) {
+            const detectionResult = await this.appDetector.detectAppPath(customPath);
+            if (!detectionResult.success || !detectionResult.path) {
                 logger.error(
                     "Yandex Music not found. Please install from https://music.yandex.ru/download/"
                 );
                 return false;
+            }
+
+            const appPath = detectionResult.path;
+
+            // Log detection method for diagnostics
+            if (detectionResult.detectionMethod) {
+                logger.info(`Launching app detected via ${detectionResult.detectionMethod}: ${appPath}`);
             }
 
             // Kill existing process
@@ -94,16 +101,24 @@ export class AppLauncher {
 
             // Find app path (using custom path if provided)
             logger.info("Finding Yandex Music installation (Windows)...");
-            const appPath = await this.appDetector.detectAppPath(customPath);
+            const detectionResult = await this.appDetector.detectAppPath(customPath);
 
-            if (!appPath) {
+            if (!detectionResult.success || !detectionResult.path) {
                 logger.error(
                     "Yandex Music not found. Please install from https://music.yandex.ru/download/"
                 );
                 return false;
             }
 
-            logger.info(`Found Yandex Music at: ${appPath}`);
+            const appPath = detectionResult.path;
+
+            // Log detection method for diagnostics
+            if (detectionResult.detectionMethod) {
+                logger.info(`Found Yandex Music via ${detectionResult.detectionMethod}: ${appPath}`);
+            } else {
+                logger.info(`Found Yandex Music at: ${appPath}`);
+            }
+
             logger.info("Launching Yandex Music with debugging port (Windows)...");
 
             // Launch process in background

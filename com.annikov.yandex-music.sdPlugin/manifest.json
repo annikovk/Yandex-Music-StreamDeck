@@ -1,6 +1,6 @@
 {
 	"Name": "Yandex Music",
-	"Version": "1.0.6.0",
+	"Version": "1.0.7.0",
 	"Author": "Konstantin Annikov",
 	"PropertyInspectorPath": "ui/global-settings.html",
 	"Actions": [
