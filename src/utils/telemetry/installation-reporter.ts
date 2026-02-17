@@ -24,16 +24,6 @@ export class InstallationReporter {
             // Detect Yandex Music installation
             const detectionResult = await appDetector.detectAppPath();
 
-            // Combine detection method with path for telemetry
-            let yandexMusicPath: string | null = null;
-            if (detectionResult.path) {
-                if (detectionResult.detectionMethod) {
-                    yandexMusicPath = `[${detectionResult.detectionMethod}] ${detectionResult.path}`;
-                } else {
-                    yandexMusicPath = detectionResult.path;
-                }
-            }
-
             // Check if app is connected
             const yandexMusicConnected = isConnected();
 
@@ -45,7 +35,8 @@ export class InstallationReporter {
                 pluginVersion: streamDeckInfo?.plugin?.version || 'unknown',
                 nodeVersion: process.version,
                 yandexMusicConnected: yandexMusicConnected,
-                yandexMusicPath: yandexMusicPath,
+                yandexMusicPath: detectionResult.path,
+                yandexMusicDetectionMethod: detectionResult.detectionMethod || null,
                 streamDeckVersion: streamDeckInfo?.application?.version || null,
                 streamDeckLanguage: streamDeckInfo?.application?.language || null,
                 installation_id: getInstallationId(),

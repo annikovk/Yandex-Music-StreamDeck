@@ -21,6 +21,7 @@ export interface InstallationInfo {
     // Yandex Music info
     yandexMusicConnected: boolean;
     yandexMusicPath: string | null;
+    yandexMusicDetectionMethod: string | null;
 
     // Stream Deck application info
     streamDeckVersion: string | null;
