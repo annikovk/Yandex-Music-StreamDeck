@@ -8,6 +8,7 @@ export interface ErrorReport {
     installation_id: string;
     error_message: string;
     stack_trace?: string;
+    platform: string;
 }
 
 export interface InstallationInfo {

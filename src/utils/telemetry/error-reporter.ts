@@ -33,6 +33,7 @@ export class ErrorReporter {
                 installation_id: getInstallationId() || '',
                 error_message: errorMessage,
                 stack_trace: stackTrace,
+                platform: process.platform,
             };
 
             const postData = JSON.stringify(errorReport);

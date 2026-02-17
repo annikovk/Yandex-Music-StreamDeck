@@ -100,7 +100,7 @@ export class AppDetector {
     /**
      * Detects Yandex Music installation on macOS.
      */
-    async detectMacOSAppPath(): Promise<string | null> {
+    private async detectMacOSAppPath(): Promise<string | null> {
         try {
             await fs.access(APP_PATHS.MACOS);
             return APP_PATHS.MACOS;
