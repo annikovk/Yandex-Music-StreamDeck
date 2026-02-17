@@ -23,6 +23,7 @@ interface TrackInfoResult {
         coverClasses?: string;
         titleClasses?: string;
         artistClasses?: string;
+        bgImageElements?: Array<{ tag: string; cls: string; bg: string }>;
     };
 }
 
@@ -100,7 +101,18 @@ export class TrackInfoExtractor {
                                 artistFound: !!artistElement,
                                 coverClasses: coverImg ? coverImg.className : (playerBar.querySelector('img') ? playerBar.querySelector('img').className : 'no img found'),
                                 titleClasses: titleElement ? titleElement.className : 'not found',
-                                artistClasses: artistElement ? artistElement.className : 'not found'
+                                artistClasses: artistElement ? artistElement.className : 'not found',
+                                bgImageElements: Array.from(playerBar.querySelectorAll('*'))
+                                    .filter(el => {
+                                        const bg = window.getComputedStyle(el).backgroundImage;
+                                        return bg && bg !== 'none' && bg.includes('url(');
+                                    })
+                                    .slice(0, 3)
+                                    .map(el => ({
+                                        tag: el.tagName,
+                                        cls: el.className.substring(0, 120),
+                                        bg: window.getComputedStyle(el).backgroundImage.substring(0, 120)
+                                    }))
                             };
                             console.log("Track info not found. Diagnostics:", diagnostics);
                             return {
