@@ -1,12 +1,9 @@
-import { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import { action, KeyDownEvent, KeyUpEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import http from "http";
 import https from "https";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import { trackAction } from "../utils/telemetry/analytics-reporter";
 
-/**
- * Constants
- */
 const UPDATE_INTERVAL_MS = 3000;
 const DEFAULT_IMAGE = "imgs/App-logo";
 const CATEGORY_IMAGE = "imgs/category-icon";
@@ -22,14 +19,14 @@ const PLAY_BUTTON_SVG = `
 
 const PLAY_BUTTON_BASE64 = Buffer.from(PLAY_BUTTON_SVG).toString("base64");
 
-/**
- * PlayPauseAction - Controls Yandex Music playback and displays album cover
- */
 @action({ UUID: "com.annikov.yandex-music.play-pause" })
 export class PlayPauseAction extends SingletonAction {
     private contexts: Set<string> = new Set();
     private checkInterval: NodeJS.Timeout | null = null;
     private lastTrackId: string | null = null;
+    private lastKnownIsPlaying: boolean | null = null;
+    private suppressPollingUntil: number = 0;
+    private verifyTimeout: NodeJS.Timeout | null = null;
 
     // ==================== Lifecycle Methods ====================
 
@@ -41,6 +38,14 @@ export class PlayPauseAction extends SingletonAction {
 
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
         await this.handlePlayPauseToggle(ev);
+    }
+
+    override async onKeyUp(ev: KeyUpEvent): Promise<void> {
+        // Stream Deck resets the icon to its pre-press state on key release,
+        // overriding any setState called during onKeyDown. Re-apply here.
+        if (this.lastKnownIsPlaying !== null) {
+            await (ev.action as any).setState(this.lastKnownIsPlaying ? STATE_PLAYING : STATE_PAUSED);
+        }
     }
 
     override onWillDisappear(ev: WillDisappearEvent): void {
@@ -59,26 +64,48 @@ export class PlayPauseAction extends SingletonAction {
                 await ev.action.showAlert();
                 return;
             }
-
-            // Small buffer after first launch
-            // ensureAppRunning already waits for UI readiness,
-            // but add 500ms cushion before first toggle
             await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        this.suppressPollingUntil = Date.now() + 2000;
+        if (this.verifyTimeout) clearTimeout(this.verifyTimeout);
+
+        const optimisticIsPlaying = !(this.lastKnownIsPlaying ?? false);
+        this.lastKnownIsPlaying = optimisticIsPlaying;
+        for (const contextId of this.contexts) {
+            const act = this.actions.find((a) => a.id === contextId);
+            if (act) await (act as any).setState(optimisticIsPlaying ? STATE_PLAYING : STATE_PAUSED);
         }
 
         const result = await yandexMusicController.togglePlayback();
         if (!result) {
+            const revertState = !optimisticIsPlaying;
+            this.lastKnownIsPlaying = revertState;
+            for (const contextId of this.contexts) {
+                const act = this.actions.find((a) => a.id === contextId);
+                if (act) await (act as any).setState(revertState ? STATE_PLAYING : STATE_PAUSED);
+            }
+            this.suppressPollingUntil = 0;
             await ev.action.showAlert();
-        } else {
-            await this.updateCovers();
+            return;
         }
+
+        await this.updateCovers();
+
+        this.verifyTimeout = setTimeout(async () => {
+            this.lastTrackId = null;
+            await this.updateCovers();
+        }, 2000);
     }
 
     // ==================== Update Interval Management ====================
 
     private startUpdateInterval(): void {
         if (!this.checkInterval) {
-            this.checkInterval = setInterval(() => this.updateCovers(), UPDATE_INTERVAL_MS);
+            this.checkInterval = setInterval(() => {
+                if (Date.now() < this.suppressPollingUntil) return;
+                this.updateCovers();
+            }, UPDATE_INTERVAL_MS);
         }
     }
 
@@ -164,11 +191,11 @@ export class PlayPauseAction extends SingletonAction {
                 await action.setImage(overlayedImage);
             }
         }
+        this.lastKnownIsPlaying = isPlaying;
         await action.setState(isPlaying ? STATE_PLAYING : STATE_PAUSED);
     }
 
     private createPausedOverlay(coverDataUrl: string): string {
-        // Create an SVG that layers the cover image with a play button overlay
         const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <image href="${coverDataUrl}" width="144" height="144"/>

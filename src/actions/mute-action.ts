@@ -1,4 +1,4 @@
-import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import streamDeck, { action, KeyDownEvent, KeyUpEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import { trackAction } from "../utils/telemetry/analytics-reporter";
 
@@ -6,20 +6,20 @@ import { trackAction } from "../utils/telemetry/analytics-reporter";
 export class MuteAction extends SingletonAction {
     private contexts: Set<string> = new Set();
     private checkInterval: NodeJS.Timeout | null = null;
+    private lastKnownMutedState: boolean | null = null;
+    private suppressPollingUntil: number = 0;
+    private verifyTimeout: NodeJS.Timeout | null = null;
 
     override async onWillAppear(ev: WillAppearEvent): Promise<void> {
         this.contexts.add(ev.action.id);
-
         if (!this.checkInterval) {
             this.checkInterval = setInterval(() => this.updateStates(), 1000);
         }
-
-        await this.updateState(ev.action);
+        await this.updateStates(true);
     }
 
     override onWillDisappear(ev: WillDisappearEvent): void {
         this.contexts.delete(ev.action.id);
-
         if (this.contexts.size === 0 && this.checkInterval) {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
@@ -29,61 +29,62 @@ export class MuteAction extends SingletonAction {
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
         trackAction("mute");
 
-        // Ensure app is running before executing action
         if (!yandexMusicController.isConnected()) {
             const appRunning = await yandexMusicController.ensureAppRunning();
             if (!appRunning) {
                 await ev.action.showAlert();
                 return;
             }
-            // Small buffer after first launch
             await new Promise(resolve => setTimeout(resolve, 500));
         }
 
+        this.suppressPollingUntil = Date.now() + 2000;
+        if (this.verifyTimeout) clearTimeout(this.verifyTimeout);
+
+        const optimisticState = !(this.lastKnownMutedState ?? false);
+        await this.applyState(optimisticState);
+
         const result = await yandexMusicController.toggleMute();
         if (!result) {
+            await this.applyState(!optimisticState);
+            this.suppressPollingUntil = 0;
             await ev.action.showAlert();
-        } else {
-            await this.updateStates(); // Immediate visual feedback
-        }
-    }
-
-    private async updateStates(): Promise<void> {
-        if (this.contexts.size === 0) {
-            streamDeck.logger.info('[Mute] No contexts, skipping update');
             return;
         }
 
+        this.verifyTimeout = setTimeout(async () => {
+            this.lastKnownMutedState = null;
+            await this.updateStates(true);
+        }, 2000);
+    }
+
+    override async onKeyUp(ev: KeyUpEvent): Promise<void> {
+        if (this.lastKnownMutedState !== null) {
+            await (ev.action as any).setState(this.lastKnownMutedState ? 1 : 0);
+        }
+    }
+
+    private async updateStates(force = false): Promise<void> {
+        if (this.contexts.size === 0) return;
+        if (!force && Date.now() < this.suppressPollingUntil) return;
+
         try {
             const isMuted = await yandexMusicController.isMuted();
-            const targetState = isMuted ? 1 : 0;
-
-            for (const contextId of this.contexts) {
-                const action = this.actions.find((a) => a.id === contextId);
-                if (action && "setState" in action) {
-                    await (action as any).setState(targetState);
-                } else {
-                    streamDeck.logger.warn(`[Mute] Action not found or no setState for context ${contextId}`);
-                }
-            }
+            if (isMuted === this.lastKnownMutedState) return;
+            await this.applyState(isMuted);
         } catch (err) {
             streamDeck.logger.error('[Mute] Error updating states', err);
         }
     }
 
-    private async updateState(action: any): Promise<void> {
-        try {
-            const isMuted = await yandexMusicController.isMuted();
-            const targetState = isMuted ? 1 : 0;
-            streamDeck.logger.info(`[Mute] updateState called: isMuted=${isMuted}, targetState=${targetState}`);
-            if ("setState" in action) {
-                await action.setState(targetState);
-                streamDeck.logger.info(`[Mute] State set successfully to ${targetState}`);
-            } else {
-                streamDeck.logger.warn('[Mute] Action does not have setState method');
+    private async applyState(isMuted: boolean): Promise<void> {
+        this.lastKnownMutedState = isMuted;
+        const targetState = isMuted ? 1 : 0;
+        for (const contextId of this.contexts) {
+            const act = this.actions.find((a) => a.id === contextId);
+            if (act && "setState" in act) {
+                await (act as any).setState(targetState);
             }
-        } catch (err) {
-            streamDeck.logger.error('[Mute] Error in updateState', err);
         }
     }
 }
