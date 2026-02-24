@@ -1,4 +1,4 @@
-import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import streamDeck, { action, KeyDownEvent, KeyUpEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import { trackAction } from "../utils/telemetry/analytics-reporter";
 
@@ -6,20 +6,24 @@ import { trackAction } from "../utils/telemetry/analytics-reporter";
 export class LikeAction extends SingletonAction {
     private contexts: Set<string> = new Set();
     private checkInterval: NodeJS.Timeout | null = null;
+    private lastKnownLikedState: boolean | null = null;
+    // Suppress polling while an optimistic update is in flight so a stale DOM
+    // read cannot overwrite it before likeTrack() completes.
+    private suppressPollingUntil: number = 0;
+    // Cancellable timer that does an authoritative DOM read after 2 s to
+    // self-correct if the optimistic toggle guessed wrong (stale cache).
+    private verifyTimeout: NodeJS.Timeout | null = null;
 
     override async onWillAppear(ev: WillAppearEvent): Promise<void> {
         this.contexts.add(ev.action.id);
-
         if (!this.checkInterval) {
             this.checkInterval = setInterval(() => this.updateStates(), 1000);
         }
-
-        await this.updateState(ev.action);
+        await this.updateStates(true);
     }
 
     override onWillDisappear(ev: WillDisappearEvent): void {
         this.contexts.delete(ev.action.id);
-
         if (this.contexts.size === 0 && this.checkInterval) {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
@@ -29,61 +33,66 @@ export class LikeAction extends SingletonAction {
     override async onKeyDown(ev: KeyDownEvent): Promise<void> {
         trackAction("like");
 
-        // Ensure app is running before executing action
         if (!yandexMusicController.isConnected()) {
             const appRunning = await yandexMusicController.ensureAppRunning();
             if (!appRunning) {
                 await ev.action.showAlert();
                 return;
             }
-            // Small buffeasdr after first launch
             await new Promise(resolve => setTimeout(resolve, 500));
         }
 
+        // Must be set before the first await so no polling tick can sneak in
+        // between applyState's internal setState await and this assignment.
+        this.suppressPollingUntil = Date.now() + 2000;
+        if (this.verifyTimeout) clearTimeout(this.verifyTimeout);
+
+        const optimisticState = !(this.lastKnownLikedState ?? false);
+        await this.applyState(optimisticState);
+
         const result = await yandexMusicController.likeTrack();
         if (!result) {
+            await this.applyState(!optimisticState);
+            this.suppressPollingUntil = 0;
             await ev.action.showAlert();
-        } else {
-            await this.updateStates(); // Immediate visual feedback
-        }
-    }
-
-    private async updateStates(): Promise<void> {
-        if (this.contexts.size === 0) {
-            streamDeck.logger.info('[Like] No contexts, skipping update');
             return;
         }
 
+        this.verifyTimeout = setTimeout(async () => {
+            this.lastKnownLikedState = null;
+            await this.updateStates(true);
+        }, 2000);
+    }
+
+    override async onKeyUp(ev: KeyUpEvent): Promise<void> {
+        // Stream Deck resets the icon to its pre-press state on key release,
+        // overriding any setState called during onKeyDown. Re-apply here.
+        if (this.lastKnownLikedState !== null) {
+            await (ev.action as any).setState(this.lastKnownLikedState ? 1 : 0);
+        }
+    }
+
+    private async updateStates(force = false): Promise<void> {
+        if (this.contexts.size === 0) return;
+        if (!force && Date.now() < this.suppressPollingUntil) return;
+
         try {
             const isLiked = await yandexMusicController.isLiked();
-            const targetState = isLiked ? 1 : 0;
-
-            for (const contextId of this.contexts) {
-                const action = this.actions.find((a) => a.id === contextId);
-                if (action && "setState" in action) {
-                    await (action as any).setState(targetState);
-                } else {
-                    streamDeck.logger.warn(`[Like] Action not found or no setState for context ${contextId}`);
-                }
-            }
+            if (isLiked === this.lastKnownLikedState) return;
+            await this.applyState(isLiked);
         } catch (err) {
             streamDeck.logger.error('[Like] Error updating states', err);
         }
     }
 
-    private async updateState(action: any): Promise<void> {
-        try {
-            const isLiked = await yandexMusicController.isLiked();
-            const targetState = isLiked ? 1 : 0;
-            streamDeck.logger.info(`[Like] updateState called: isLiked=${isLiked}, targetState=${targetState}`);
-            if ("setState" in action) {
-                await action.setState(targetState);
-                streamDeck.logger.info(`[Like] State set successfully to ${targetState}`);
-            } else {
-                streamDeck.logger.warn('[Like] Action does not have setState method');
+    private async applyState(isLiked: boolean): Promise<void> {
+        this.lastKnownLikedState = isLiked;
+        const targetState = isLiked ? 1 : 0;
+        for (const contextId of this.contexts) {
+            const act = this.actions.find((a) => a.id === contextId);
+            if (act && "setState" in act) {
+                await (act as any).setState(targetState);
             }
-        } catch (err) {
-            streamDeck.logger.error('[Like] Error in updateState', err);
         }
     }
 }
