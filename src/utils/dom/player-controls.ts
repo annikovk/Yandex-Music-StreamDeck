@@ -22,6 +22,8 @@ export class PlayerControls {
 
     /**
      * Toggles play/pause state.
+     * Newer YM exposes a single PLAY_BUTTON in the player bar that toggles
+     * regardless of state — click it directly when scoped to the bar.
      */
     async togglePlayback(): Promise<boolean> {
         logger.info("Toggling playback");
@@ -30,53 +32,18 @@ export class PlayerControls {
             `
             (function() {
                 try {
-                    // Try finding pause button (means playing)
-                    let pauseButton = document.querySelector("${DOM_SELECTORS.PAUSE_BUTTON}");
+                    ${this.queryHelper.buildPlayerBarQuery()}
+
+                    const pauseButton = playerBar.querySelector("${DOM_SELECTORS.PAUSE_BUTTON}");
                     if (pauseButton) {
-                        console.log("Found pause button - track is playing");
                         pauseButton.click();
                         return { success: true, message: 'Track paused' };
                     }
 
-                    // Try finding play button (means paused)
-                    let playButton = document.querySelector("${DOM_SELECTORS.PLAY_BUTTON}");
+                    const playButton = playerBar.querySelector("${DOM_SELECTORS.PLAY_BUTTON}");
                     if (playButton) {
-                        if (!playButton.classList.contains("${DOM_SELECTORS.PLAY_BUTTON_WITH_COVER_CLASS}")) {
-                            console.log("Found play button - track is paused");
-                            playButton.click();
-                            return { success: true, message: 'Track playing' };
-                        }
-                    }
-
-                    // Try finding by SVG icon (pause)
-                    const pauseSvg = document.querySelector("${DOM_SELECTORS.PAUSE_SVG_ICON}");
-                    if (pauseSvg) {
-                        const pauseButton = pauseSvg.closest('button');
-                        if (pauseButton) {
-                            console.log("Found pause button by SVG icon");
-                            pauseButton.click();
-                            return { success: true, message: 'Track paused' };
-                        }
-                    }
-
-                    // Try finding by SVG icon (play)
-                    const playSvg = document.querySelector("${DOM_SELECTORS.PLAY_SVG_ICON}");
-                    if (playSvg) {
-                        const playButton = playSvg.closest('button');
-                        if (playButton) {
-                            console.log("Found play button by SVG icon");
-                            playButton.click();
-                            return { success: true, message: 'Track playing' };
-                        }
-                    }
-
-                    // Fallback: use middle button from sonata controls
-                    const sonataButtons = document.querySelectorAll("${DOM_SELECTORS.SONATA_BUTTONS}");
-                    if (sonataButtons.length >= 3) {
-                        const middleButton = sonataButtons[1];
-                        console.log("Using middle button");
-                        middleButton.click();
-                        return { success: true, message: 'Track toggled' };
+                        playButton.click();
+                        return { success: true, message: 'Playback toggled' };
                     }
 
                     return { success: false, message: 'Play/pause button not found' };
@@ -135,35 +102,12 @@ export class PlayerControls {
             `
             (function() {
                 try {
-                    let muteButton = document.querySelector("${DOM_SELECTORS.MUTE_BUTTON}");
+                    ${this.queryHelper.buildPlayerBarQuery()}
+
+                    const muteButton = playerBar.querySelector("${DOM_SELECTORS.MUTE_BUTTON}");
                     if (muteButton) {
-                        const ariaLabel = muteButton.getAttribute('aria-label');
-                        const isMuted = ariaLabel === 'Включить звук';
-                        console.log("Mute button found, current state:", isMuted ? "Muted" : "Unmuted");
                         muteButton.click();
-                        return { success: true, message: isMuted ? 'Sound on' : 'Sound off' };
-                    }
-
-                    // Try finding by SVG icon (muted)
-                    const volumeOffSvg = document.querySelector("${DOM_SELECTORS.VOLUME_OFF_SVG}");
-                    if (volumeOffSvg) {
-                        const muteButton = volumeOffSvg.closest('button');
-                        if (muteButton) {
-                            console.log("Found mute button by SVG - muted");
-                            muteButton.click();
-                            return { success: true, message: 'Sound on' };
-                        }
-                    }
-
-                    // Try finding by SVG icon (unmuted)
-                    const volumeSvg = document.querySelector("${DOM_SELECTORS.VOLUME_ON_SVG}");
-                    if (volumeSvg) {
-                        const muteButton = volumeSvg.closest('button');
-                        if (muteButton) {
-                            console.log("Found mute button by SVG - unmuted");
-                            muteButton.click();
-                            return { success: true, message: 'Sound off' };
-                        }
+                        return { success: true, message: 'Mute toggled' };
                     }
 
                     return { success: false, message: 'Mute button not found' };
@@ -185,12 +129,12 @@ export class PlayerControls {
     }
 
     /**
-     * Generic button click handler with fallback for like/dislike buttons.
+     * Generic button click handler — always scoped to the player bar so it
+     * doesn't accidentally hit duplicate `data-test-id` matches inside
+     * NewRelease cards on the home page.
      */
     private async clickButton(buttonId: string, actionDescription: string): Promise<boolean> {
         logger.info("Executing action: " + actionDescription);
-
-        const isLikeOrDislike = buttonId === 'LIKE_BUTTON' || buttonId === 'DISLIKE_BUTTON';
 
         const expression = `
             (function() {
@@ -198,22 +142,10 @@ export class PlayerControls {
                     ${this.queryHelper.buildButtonQuery(buttonId)}
 
                     if (button) {
-                        console.log("Button found:", "${buttonId}");
                         button.click();
                         return { success: true, message: 'Button clicked' };
                     }
 
-                    ${isLikeOrDislike ? this.queryHelper.buildLikeDislikeFallbackQuery(buttonId) : ''}
-
-                    ${isLikeOrDislike ? `
-                    if (button) {
-                        console.log("${buttonId} found by position");
-                        button.click();
-                        return { success: true, message: '${buttonId} clicked' };
-                    }
-                    ` : ''}
-
-                    console.log("Button not found:", "${buttonId}");
                     return { success: false, message: 'Button not found' };
                 } catch (err) {
                     return { success: false, message: 'Error: ' + err.message };

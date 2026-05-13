@@ -22,29 +22,12 @@ export class DOMQueryHelper {
     }
 
     /**
-     * Builds a query expression to find a button by test ID.
+     * Builds a query expression to find a button by test ID, scoped to the player bar.
      */
     buildButtonQuery(buttonId: string): string {
         return `
             ${this.buildPlayerBarQuery()}
             let button = playerBar.querySelector("[data-test-id='${buttonId}']");
-        `;
-    }
-
-    /**
-     * Builds a fallback query for like/dislike buttons by position.
-     */
-    buildLikeDislikeFallbackQuery(buttonId: string): string {
-        const isLike = buttonId === 'LIKE_BUTTON';
-        const selector = isLike ? 'button:last-of-type' : 'button:first-of-type';
-
-        return `
-            if (!button) {
-                const sonataSection = playerBar.querySelector("${DOM_SELECTORS.SONATA_SECTION}");
-                if (sonataSection) {
-                    button = sonataSection.querySelector("${selector}");
-                }
-            }
         `;
     }
 }

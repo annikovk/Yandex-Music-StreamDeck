@@ -12,29 +12,36 @@ export class PlayerStateQuery {
 
     /**
      * Checks if music is currently playing.
+     * Newer YM versions keep `data-test-id='PLAY_BUTTON'` regardless of state
+     * and only swap the SVG sprite (#play_filled_* vs #pause_filled_*).
      */
     async isPlaying(): Promise<boolean> {
         try {
-            const result = await this.cdpExecutor.evaluate<{ isPlaying: boolean }>(
+            const result = await this.cdpExecutor.evaluate<{ isPlaying: boolean; debug?: string }>(
                 `
                 (function() {
-                    // Check for pause button (means playing)
-                    let pauseButton = document.querySelector("${DOM_SELECTORS.PAUSE_BUTTON}");
-                    if (pauseButton) return { isPlaying: true };
+                    try {
+                        let playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                        if (!playerBar) return { isPlaying: false, debug: 'no-playerbar' };
 
-                    // Check for play button (means paused)
-                    let playButton = document.querySelector("${DOM_SELECTORS.PLAY_BUTTON}");
-                    if (playButton) return { isPlaying: false };
+                        // Newer versions: only PLAY_BUTTON exists, sprite href encodes state.
+                        const playButton = playerBar.querySelector("${DOM_SELECTORS.PLAY_BUTTON}");
+                        if (playButton) {
+                            const use = playButton.querySelector('use');
+                            const href = use ? (use.getAttribute('xlink:href') || use.getAttribute('href') || '') : '';
+                            if (href.includes('${SVG_ICONS.PAUSE_FILLED}')) return { isPlaying: true, debug: 'sprite-pause' };
+                            if (href.includes('${SVG_ICONS.PLAY_FILLED}')) return { isPlaying: false, debug: 'sprite-play' };
+                        }
 
-                    // Check by SVG icon (pause)
-                    const pauseSvg = document.querySelector("${DOM_SELECTORS.PAUSE_SVG_ICON}");
-                    if (pauseSvg) return { isPlaying: true };
+                        // Legacy versions: separate PAUSE_BUTTON appeared while playing.
+                        const pauseButton = playerBar.querySelector("${DOM_SELECTORS.PAUSE_BUTTON}");
+                        if (pauseButton) return { isPlaying: true, debug: 'legacy-pause-tid' };
 
-                    // Check by SVG icon (play)
-                    const playSvg = document.querySelector("${DOM_SELECTORS.PLAY_SVG_ICON}");
-                    if (playSvg) return { isPlaying: false };
-
-                    return { isPlaying: false };
+                        return { isPlaying: false, debug: 'no-state' };
+                    } catch (err) {
+                        return { isPlaying: false, debug: 'error: ' + err.message };
+                    }
                 })()
                 `
             );
@@ -55,63 +62,23 @@ export class PlayerStateQuery {
                 `
                 (function() {
                     try {
-                        let playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}");
-                        if (!playerBar) {
-                            playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
-                            if (!playerBar) {
-                                console.log('[Like State] Player bar not found');
-                                return { isLiked: false, debug: 'no-playerbar' };
-                            }
+                        const playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                        if (!playerBar) return { isLiked: false, debug: 'no-playerbar' };
+
+                        const likeButton = playerBar.querySelector("${DOM_SELECTORS.LIKE_BUTTON}");
+                        if (!likeButton) return { isLiked: false, debug: 'no-button' };
+
+                        const ariaPressed = likeButton.getAttribute('aria-pressed');
+                        if (ariaPressed === 'true' || ariaPressed === 'false') {
+                            return { isLiked: ariaPressed === 'true', debug: 'aria-pressed' };
                         }
 
-                        // Try finding like button by test ID
-                        let likeButton = playerBar.querySelector("${DOM_SELECTORS.LIKE_BUTTON}");
-                        if (likeButton) {
-                            const ariaPressed = likeButton.getAttribute('aria-pressed');
-                            const isLiked = ariaPressed === 'true';
-                            const svgUse = likeButton.querySelector('svg use');
-                            const likeIconHref = svgUse?.getAttribute('xlink:href');
-                            const isLikedBySvg = likeIconHref && likeIconHref.includes('${SVG_ICONS.LIKED}');
-
-                            console.log('[Like State] Found like button:', {
-                                ariaPressed,
-                                likeIconHref,
-                                isLiked,
-                                isLikedBySvg,
-                                finalState: isLiked || isLikedBySvg
-                            });
-
-                            return { isLiked: isLiked || isLikedBySvg, debug: 'primary-method' };
-                        }
-
-                        // Fallback: find by position in sonata section
-                        const sonataSection = playerBar.querySelector("${DOM_SELECTORS.SONATA_SECTION}");
-                        if (sonataSection) {
-                            const likeButton = sonataSection.querySelector('button:last-of-type');
-                            if (likeButton) {
-                                const ariaPressed = likeButton.getAttribute('aria-pressed');
-                                const isLiked = ariaPressed === 'true';
-                                const svgUse = likeButton.querySelector('svg use');
-                                const likeIconHref = svgUse?.getAttribute('xlink:href');
-                                const isLikedBySvg = likeIconHref && likeIconHref.includes('${SVG_ICONS.LIKED}');
-
-                                console.log('[Like State] Found like button (fallback):', {
-                                    ariaPressed,
-                                    likeIconHref,
-                                    isLiked,
-                                    isLikedBySvg,
-                                    finalState: isLiked || isLikedBySvg
-                                });
-
-                                return { isLiked: isLiked || isLikedBySvg, debug: 'fallback-method' };
-                            }
-                        }
-
-                        console.log('[Like State] Like button not found');
-                        return { isLiked: false, debug: 'no-button' };
+                        const use = likeButton.querySelector('use');
+                        const href = use ? (use.getAttribute('xlink:href') || use.getAttribute('href') || '') : '';
+                        return { isLiked: href.includes('${SVG_ICONS.LIKED}'), debug: 'sprite-href' };
                     } catch (err) {
-                        console.log('[Like State] Error:', err);
-                        return { isLiked: false, debug: 'error' };
+                        return { isLiked: false, debug: 'error: ' + err.message };
                     }
                 })()
                 `
@@ -133,37 +100,18 @@ export class PlayerStateQuery {
                 `
                 (function() {
                     try {
-                        // Try finding mute button by test ID
-                        let muteButton = document.querySelector("${DOM_SELECTORS.MUTE_BUTTON}");
-                        if (muteButton) {
-                            // Check SVG icon (language-independent)
-                            const svgUse = muteButton.querySelector('svg use');
-                            const svgHref = svgUse ? svgUse.getAttribute('xlink:href') : null;
+                        const playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                        if (!playerBar) return { isMuted: false, debug: 'no-playerbar' };
 
-                            if (svgHref) {
-                                const isMuted = svgHref.includes('${SVG_ICONS.VOLUME_OFF}');
+                        const muteButton = playerBar.querySelector("${DOM_SELECTORS.MUTE_BUTTON}");
+                        if (!muteButton) return { isMuted: false, debug: 'no-button' };
 
-                                console.log('[Mute State] Detected via SVG:', {
-                                    svgHref,
-                                    isMuted
-                                });
-
-                                return { isMuted, debug: 'svg-href-method' };
-                            }
-                        }
-
-                        // Fallback: Direct SVG selector check
-                        const volumeOffSvg = document.querySelector("${DOM_SELECTORS.VOLUME_OFF_SVG}");
-                        if (volumeOffSvg) {
-                            console.log('[Mute State] Detected via direct SVG selector');
-                            return { isMuted: true, debug: 'svg-direct-method' };
-                        }
-
-                        console.log('[Mute State] Mute button not found or not muted');
-                        return { isMuted: false, debug: 'no-button' };
+                        const use = muteButton.querySelector('use');
+                        const href = use ? (use.getAttribute('xlink:href') || use.getAttribute('href') || '') : '';
+                        return { isMuted: href.includes('${SVG_ICONS.VOLUME_OFF}'), debug: 'sprite-href' };
                     } catch (err) {
-                        console.log('[Mute State] Error:', err);
-                        return { isMuted: false, debug: 'error' };
+                        return { isMuted: false, debug: 'error: ' + err.message };
                     }
                 })()
                 `
