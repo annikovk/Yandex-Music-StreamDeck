@@ -1,6 +1,7 @@
 import streamDeck, { action, KeyDownEvent, KeyUpEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import { trackAction } from "../utils/telemetry/analytics-reporter";
+import { iconThemeManager } from "../utils/core/icon-theme-manager";
 
 @action({ UUID: "com.annikov.yandex-music.like" })
 export class LikeAction extends SingletonAction {
@@ -18,6 +19,7 @@ export class LikeAction extends SingletonAction {
         this.contexts.add(ev.action.id);
         if (!this.checkInterval) {
             this.checkInterval = setInterval(() => this.updateStates(), 1000);
+            iconThemeManager.onChange(() => this.refreshIcons());
         }
         await this.updateStates(true);
     }
@@ -69,6 +71,9 @@ export class LikeAction extends SingletonAction {
         // overriding any setState called during onKeyDown. Re-apply here.
         if (this.lastKnownLikedState !== null) {
             await (ev.action as any).setState(this.lastKnownLikedState ? 1 : 0);
+            await ev.action.setImage(this.lastKnownLikedState
+                ? iconThemeManager.icons().like
+                : iconThemeManager.icons().noLike);
         }
     }
 
@@ -88,11 +93,19 @@ export class LikeAction extends SingletonAction {
     private async applyState(isLiked: boolean): Promise<void> {
         this.lastKnownLikedState = isLiked;
         const targetState = isLiked ? 1 : 0;
+        const iconPath = isLiked ? iconThemeManager.icons().like : iconThemeManager.icons().noLike;
         for (const contextId of this.contexts) {
             const act = this.actions.find((a) => a.id === contextId);
             if (act && "setState" in act) {
                 await (act as any).setState(targetState);
+                await act.setImage(iconPath);
             }
+        }
+    }
+
+    private async refreshIcons(): Promise<void> {
+        if (this.lastKnownLikedState !== null) {
+            await this.applyState(this.lastKnownLikedState);
         }
     }
 }

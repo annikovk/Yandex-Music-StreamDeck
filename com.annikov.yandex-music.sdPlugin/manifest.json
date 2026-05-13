@@ -26,46 +26,46 @@
 		{
 			"Name": "Previous Track",
 			"UUID": "com.annikov.yandex-music.previous",
-			"Icon": "imgs/actions/ym-back",
+			"Icon": "imgs/actions/actions-icons/list/back",
 			"Tooltip": "Previous track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/ym-back"
+					"Image": "imgs/actions/actions-icons/white/back"
 				}
 			]
 		},
 		{
 			"Name": "Next Track",
 			"UUID": "com.annikov.yandex-music.next",
-			"Icon": "imgs/actions/ym-next",
+			"Icon": "imgs/actions/actions-icons/list/next",
 			"Tooltip": "Next track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/ym-next"
+					"Image": "imgs/actions/actions-icons/white/next"
 				}
 			]
 		},
 		{
 			"Name": "Like",
 			"UUID": "com.annikov.yandex-music.like",
-			"Icon": "imgs/actions/ym-no-like",
+			"Icon": "imgs/actions/actions-icons/list/like-0",
 			"Tooltip": "Like current track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/ym-no-like",
+					"Image": "imgs/actions/actions-icons/white/like-0",
 					"Name": "Not Liked"
 				},
 				{
-					"Image": "imgs/actions/ym-like",
+					"Image": "imgs/actions/actions-icons/white/like-1",
 					"Name": "Liked"
 				}
 			]
@@ -73,32 +73,32 @@
 		{
 			"Name": "Dislike",
 			"UUID": "com.annikov.yandex-music.dislike",
-			"Icon": "imgs/actions/ym-dislike",
+			"Icon": "imgs/actions/actions-icons/list/dislike",
 			"Tooltip": "Dislike current track",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/ym-dislike"
+					"Image": "imgs/actions/actions-icons/white/dislike"
 				}
 			]
 		},
 		{
 			"Name": "Mute",
 			"UUID": "com.annikov.yandex-music.mute",
-			"Icon": "imgs/actions/ym-music-on",
+			"Icon": "imgs/actions/actions-icons/list/sound-on",
 			"Tooltip": "Toggle mute",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/ym-music-on",
+					"Image": "imgs/actions/actions-icons/white/sound-on",
 					"Name": "Sound On"
 				},
 				{
-					"Image": "imgs/actions/ym-music-off",
+					"Image": "imgs/actions/actions-icons/white/sound-off",
 					"Name": "Sound Off"
 				}
 			]

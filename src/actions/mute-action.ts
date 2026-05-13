@@ -1,6 +1,7 @@
 import streamDeck, { action, KeyDownEvent, KeyUpEvent, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { yandexMusicController } from "../utils/yandex-music-controller";
 import { trackAction } from "../utils/telemetry/analytics-reporter";
+import { iconThemeManager } from "../utils/core/icon-theme-manager";
 
 @action({ UUID: "com.annikov.yandex-music.mute" })
 export class MuteAction extends SingletonAction {
@@ -14,6 +15,7 @@ export class MuteAction extends SingletonAction {
         this.contexts.add(ev.action.id);
         if (!this.checkInterval) {
             this.checkInterval = setInterval(() => this.updateStates(), 1000);
+            iconThemeManager.onChange(() => this.refreshIcons());
         }
         await this.updateStates(true);
     }
@@ -61,6 +63,9 @@ export class MuteAction extends SingletonAction {
     override async onKeyUp(ev: KeyUpEvent): Promise<void> {
         if (this.lastKnownMutedState !== null) {
             await (ev.action as any).setState(this.lastKnownMutedState ? 1 : 0);
+            await ev.action.setImage(this.lastKnownMutedState
+                ? iconThemeManager.icons().soundOff
+                : iconThemeManager.icons().soundOn);
         }
     }
 
@@ -80,11 +85,19 @@ export class MuteAction extends SingletonAction {
     private async applyState(isMuted: boolean): Promise<void> {
         this.lastKnownMutedState = isMuted;
         const targetState = isMuted ? 1 : 0;
+        const iconPath = isMuted ? iconThemeManager.icons().soundOff : iconThemeManager.icons().soundOn;
         for (const contextId of this.contexts) {
             const act = this.actions.find((a) => a.id === contextId);
             if (act && "setState" in act) {
                 await (act as any).setState(targetState);
+                await act.setImage(iconPath);
             }
+        }
+    }
+
+    private async refreshIcons(): Promise<void> {
+        if (this.lastKnownMutedState !== null) {
+            await this.applyState(this.lastKnownMutedState);
         }
     }
 }

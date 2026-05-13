@@ -13,7 +13,8 @@ import { logAndReportError } from "./utils/telemetry/error-reporter";
 import { installationReporter } from "./utils/telemetry/installation-reporter";
 import type { StreamDeckInfo } from "./utils/types/analytics.types";
 import type { PluginGlobalSettings } from "./types/settings";
-import { getCustomExecutablePath, setAutoDetectionSucceeded } from "./utils/core/settings";
+import { getCustomExecutablePath, getIconTheme, setAutoDetectionSucceeded } from "./utils/core/settings";
+import { iconThemeManager } from "./utils/core/icon-theme-manager";
 
 async function initializeInstallationId(): Promise<string> {
     const settings = await streamDeck.settings.getGlobalSettings() as PluginGlobalSettings;
@@ -50,6 +51,15 @@ await streamDeck.connect();
 const installationId = await initializeInstallationId();
 setInstallationId(installationId);
 streamDeck.logger.info("Installation ID initialized:", installationId);
+
+// Initialize icon theme from persisted settings
+iconThemeManager.update(await getIconTheme());
+
+// Keep icon theme in sync when the property inspector changes global settings
+streamDeck.settings.onDidReceiveGlobalSettings((ev) => {
+    const s = ev.settings as PluginGlobalSettings;
+    iconThemeManager.update(s.iconTheme ?? 'white');
+});
 
 // Try to connect to CDP if app is already running (non-fatal)
 await yandexMusicController

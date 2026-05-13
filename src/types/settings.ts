@@ -1,8 +1,15 @@
+import type { IconTheme } from '../utils/constants/icon-themes';
+
 /**
  * Global plugin settings that persist across sessions.
  * Stored in Stream Deck's global settings storage.
  */
 export interface PluginGlobalSettings {
+    /**
+     * Icon color theme for all action buttons.
+     * Defaults to 'white' when not set.
+     */
+    iconTheme?: IconTheme;
     /**
      * Unique identifier for this plugin installation.
      * Used for analytics and error reporting.

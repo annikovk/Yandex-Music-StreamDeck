@@ -4,6 +4,16 @@
 
 import streamDeck from "@elgato/streamdeck";
 import type { PluginGlobalSettings } from "../../types/settings";
+import type { IconTheme } from "../constants/icon-themes";
+
+/**
+ * Retrieves the icon theme from global settings.
+ * Returns 'white' if not configured.
+ */
+export async function getIconTheme(): Promise<IconTheme> {
+    const settings = await streamDeck.settings.getGlobalSettings() as PluginGlobalSettings;
+    return settings.iconTheme ?? 'white';
+}
 
 /**
  * Retrieves the custom executable path from global settings.
