@@ -68,14 +68,26 @@ export class TrackInfoExtractor {
                             }
                         }
 
-                        const coverImg = playerBar.querySelector("${DOM_SELECTORS.COVER_IMAGE}");
-                        const titleElement = playerBar.querySelector("${DOM_SELECTORS.TRACK_TITLE}");
+                        // Desktop-bar selectors first; fall back to the
+                        // Vibe-bar variants when on Моя Волна / My Vibe.
+                        const coverImg = playerBar.querySelector("${DOM_SELECTORS.COVER_IMAGE}")
+                                       || playerBar.querySelector("${DOM_SELECTORS.VIBE_COVER_IMAGE}");
+                        const titleElement = playerBar.querySelector("${DOM_SELECTORS.TRACK_TITLE}")
+                                           || playerBar.querySelector("${DOM_SELECTORS.VIBE_TRACK_TITLE}");
                         const artistElement = playerBar.querySelector("${DOM_SELECTORS.ARTIST_NAME}");
+                        // Vibe bar has no dedicated artist field — surface the
+                        // album name (from AlbumCover_root's aria-label) instead.
+                        const albumLabelEl = !artistElement
+                            ? playerBar.querySelector("${DOM_SELECTORS.VIBE_ALBUM_LABEL}")
+                            : null;
+                        const vibeArtistText = albumLabelEl
+                            ? (albumLabelEl.getAttribute('aria-label') || '').replace(/^Album\\s+/i, '')
+                            : '';
 
-                        if (coverImg && titleElement && artistElement) {
+                        if (coverImg && titleElement && (artistElement || vibeArtistText)) {
                             const originalCoverUrl = coverImg.src;
                             const title = titleElement.textContent;
-                            const artist = artistElement.textContent;
+                            const artist = artistElement ? artistElement.textContent : vibeArtistText;
 
                             let coverUrl = originalCoverUrl;
                             if (originalCoverUrl.includes('/100x100')) {

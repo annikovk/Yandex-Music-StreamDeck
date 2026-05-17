@@ -37,10 +37,18 @@ export const DOM_SELECTORS = {
     // Mute button
     MUTE_BUTTON: "[data-test-id='CHANGE_VOLUME_BUTTON']",
 
-    // Track info
+    // Track info (desktop bar)
     COVER_IMAGE: "img.PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt",
     TRACK_TITLE: "[data-test-id='TRACK_TITLE']",
     ARTIST_NAME: "[data-test-id='SEPARATED_ARTIST_TITLE']",
+
+    // Track info (Vibe bar) — class-substring selectors are hash-agnostic.
+    // The Vibe bar does not surface a separate "artist" label in its compact
+    // layout; the album name on AlbumCover_root's aria-label is the closest
+    // human-readable string available, so we fall back to it as a stand-in.
+    VIBE_COVER_IMAGE: "img[class*='AlbumCover_cover']",
+    VIBE_TRACK_TITLE: "[class*='VibePlayerbarMeta_trackNameText']",
+    VIBE_ALBUM_LABEL: "[class*='AlbumCover_root'][aria-label]",
 
     // Time info
     CURRENT_TIME: "[data-test-id='TIMECODE_TIME_START']",
