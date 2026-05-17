@@ -65,7 +65,8 @@ export class AppLifecycleManager {
                     `
                     (function() {
                         const playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}") ||
-                                        document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                                        document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}") ||
+                                        document.querySelector("${DOM_SELECTORS.PLAYER_BAR_VIBE}");
                         return { ready: !!playerBar };
                     })()
                     `

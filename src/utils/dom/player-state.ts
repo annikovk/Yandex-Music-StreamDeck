@@ -22,7 +22,8 @@ export class PlayerStateQuery {
                 (function() {
                     try {
                         let playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
-                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_VIBE}");
                         if (!playerBar) return { isPlaying: false, debug: 'no-playerbar' };
 
                         // Newer versions: only PLAY_BUTTON exists, sprite href encodes state.
@@ -63,7 +64,8 @@ export class PlayerStateQuery {
                 (function() {
                     try {
                         const playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
-                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_VIBE}");
                         if (!playerBar) return { isLiked: false, debug: 'no-playerbar' };
 
                         const likeButton = playerBar.querySelector("${DOM_SELECTORS.LIKE_BUTTON}");
@@ -101,7 +103,8 @@ export class PlayerStateQuery {
                 (function() {
                     try {
                         const playerBar = document.querySelector("${DOM_SELECTORS.PLAYER_BAR_PRIMARY}")
-                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}");
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_FALLBACK}")
+                            || document.querySelector("${DOM_SELECTORS.PLAYER_BAR_VIBE}");
                         if (!playerBar) return { isMuted: false, debug: 'no-playerbar' };
 
                         const muteButton = playerBar.querySelector("${DOM_SELECTORS.MUTE_BUTTON}");

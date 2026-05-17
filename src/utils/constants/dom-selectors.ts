@@ -12,9 +12,17 @@
  */
 
 export const DOM_SELECTORS = {
-    // Player bar root
+    // Player bar root.
+    // YM ships two mutually-exclusive player containers depending on the view:
+    //   - PLAYERBAR_DESKTOP   — search / concerts / landing / collection (the
+    //                           classic bottom bar with the long progress bar)
+    //   - VIBE_PLAYERBAR      — Моя Волна / My Vibe (compact floating bar)
+    // Both contain the same data-test-id buttons inside (PLAY_BUTTON,
+    // NEXT_TRACK_BUTTON, LIKE_BUTTON, CHANGE_VOLUME_BUTTON, ...), so once we
+    // pick the right root, every button query "just works" when scoped to it.
     PLAYER_BAR_PRIMARY: ".PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN",
     PLAYER_BAR_FALLBACK: "[data-test-id='PLAYERBAR_DESKTOP']",
+    PLAYER_BAR_VIBE: "[data-test-id='VIBE_PLAYERBAR']",
 
     // Play/Pause button (single button per bar; state via sprite href)
     PLAY_BUTTON: "[data-test-id='PLAY_BUTTON']",
@@ -42,11 +50,16 @@ export const DOM_SELECTORS = {
 
 /**
  * Substrings checked against `<use xlink:href>` (e.g. "/icons/sprite.svg#play_filled_l").
- * Matching by substring keeps the check stable across icon-size variants (_l/_m/_xs).
+ *
+ * The desktop player bar uses sprite IDs like `play_filled_l` / `pause_filled_l`,
+ * while the Vibe player bar on My Vibe uses just `play` / `pause`. We match by
+ * substring to cover both — the sprite is only ever read from the PLAY_BUTTON
+ * element itself (scoped to the player bar), so no false-positive risk from
+ * unrelated sprites elsewhere on the page (e.g. `playQueue_xs` in toolbars).
  */
 export const SVG_ICONS = {
-    PAUSE_FILLED: 'pause_filled',
-    PLAY_FILLED: 'play_filled',
+    PAUSE_FILLED: 'pause',
+    PLAY_FILLED: 'play',
     VOLUME_OFF: 'volumeOff',
     LIKED: 'liked_',
 } as const;
