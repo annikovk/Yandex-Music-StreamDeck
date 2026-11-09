@@ -5,8 +5,8 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import CDP from 'chrome-remote-interface';
-import { APP_PATHS, APP_LIFECYCLE_CONFIG } from '../constants/config';
+import { APP_PATHS, APP_LIFECYCLE_CONFIG, CDP_CONFIG } from '../constants/config';
+import { findYandexMusicTarget } from '../cdp/yandex-target';
 import { logger } from '../core/logger';
 import { AppDetector } from './app-detector';
 
@@ -166,11 +166,8 @@ export class AppLauncher {
             logger.info(`Waiting for CDP port... (${i + 1}/${maxAttempts})`);
 
             try {
-                const testClient = await CDP({
-                    port: this.port,
-                    host: 'localhost'
-                });
-                await testClient.close();
+                // An open port is not enough: another browser may own it.
+                await findYandexMusicTarget(CDP_CONFIG.HOST, this.port);
                 logger.info("CDP port is ready!");
                 return true;
             } catch (error: unknown) {

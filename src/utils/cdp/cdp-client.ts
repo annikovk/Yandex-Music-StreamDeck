@@ -8,6 +8,7 @@ import type { CDPClient } from '../types/cdp.types';
 import { CDP_CONFIG } from '../constants/config';
 import { logger } from '../core/logger';
 import { ConnectionLifecycleManager } from './connection-lifecycle';
+import { findYandexMusicTarget } from './yandex-target';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
@@ -133,10 +134,13 @@ export class CDPClientManager {
             this.state = 'connecting';
             logger.info(`Creating new CDP connection on port ${this.port}`);
 
-            // Connect to CDP
+            // Attach to the Yandex Music page explicitly, never to whatever
+            // page happens to be first on the port.
+            const target = await findYandexMusicTarget(CDP_CONFIG.HOST, this.port);
             const client = await CDP({
                 port: this.port,
-                host: CDP_CONFIG.HOST
+                host: CDP_CONFIG.HOST,
+                target: target.id
             }) as unknown as CDPClient;
 
             // Enable Runtime and Page domains

@@ -4,8 +4,13 @@
 
 // CDP Configuration
 export const CDP_CONFIG = {
-    DEFAULT_PORT: 9222,
+    // Not 9222: that is Chrome's well-known debugging port, and a Chrome started
+    // with it by an automation tool takes the port first, so Yandex Music
+    // silently comes up without DevTools.
+    DEFAULT_PORT: 9339,
     HOST: 'localhost',
+    // Yandex Music's main window loads music-application://desktop/...
+    TARGET_URL_PREFIX: 'music-application://',
     CONNECTION_TIMEOUT_MS: 5000,
 } as const;
 

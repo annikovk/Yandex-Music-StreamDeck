@@ -46,8 +46,12 @@ export const DOM_SELECTORS = {
     // The Vibe bar does not surface a separate "artist" label in its compact
     // layout; the album name on AlbumCover_root's aria-label is the closest
     // human-readable string available, so we fall back to it as a stand-in.
-    VIBE_COVER_IMAGE: "img[class*='AlbumCover_cover']",
-    VIBE_TRACK_TITLE: "[class*='VibePlayerbarMeta_trackNameText']",
+    // Nov 2026 build: cover <img> lives in [data-test-id='VIBE_ALBUM_COVER'];
+    // the title moved from VibePlayerbarMeta_* to VibePlayerbarTrackName_*
+    // inside [data-test-id='VIBE_PLAYERBAR_TRACK_NAME'], where an
+    // aria-hidden copy (marquee duplicate) precedes the real one.
+    VIBE_COVER_IMAGE: "[data-test-id='VIBE_ALBUM_COVER'] img, img[class*='AlbumCover_cover']",
+    VIBE_TRACK_TITLE: "[data-test-id='VIBE_PLAYERBAR_TRACK_NAME'] [class*='trackNameText']:not([aria-hidden='true']), [class*='VibePlayerbarMeta_trackNameText']",
     VIBE_ALBUM_LABEL: "[class*='AlbumCover_root'][aria-label]",
 
     // Time info

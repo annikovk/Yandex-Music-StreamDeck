@@ -182,17 +182,18 @@ export class PlayPauseAction extends SingletonAction {
     }
 
     private async setActionImage(action: any, coverUrl: string, isPlaying: boolean): Promise<void> {
+        const state = isPlaying ? STATE_PLAYING : STATE_PAUSED;
         const dataUrl = await this.downloadImage(coverUrl);
-        if (dataUrl) {
-            if (isPlaying) {
-                await action.setImage(dataUrl);
-            } else {
-                const overlayedImage = this.createPausedOverlay(dataUrl);
-                await action.setImage(overlayedImage);
-            }
-        }
+        // Switch state first and write the image into that state explicitly.
+        // setImage without `state` only touches the current state, so with
+        // the old order (image, then state) the image landed on the previous
+        // state and the key kept showing a stale one after play/pause flipped.
         this.lastKnownIsPlaying = isPlaying;
-        await action.setState(isPlaying ? STATE_PLAYING : STATE_PAUSED);
+        await action.setState(state);
+        if (dataUrl) {
+            const image = isPlaying ? dataUrl : this.createPausedOverlay(dataUrl);
+            await action.setImage(image, { state });
+        }
     }
 
     private createPausedOverlay(coverDataUrl: string): string {
