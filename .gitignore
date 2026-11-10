@@ -7,3 +7,11 @@ node_modules/
 
 # Claude Code files
 .claude/
+
+# macOS
+.DS_Store
+
+# Release artifacts (kept locally, attached to GitHub releases)
+*.streamDeckPlugin
+RELEASE_NOTES_*.md
+tools/*.zip

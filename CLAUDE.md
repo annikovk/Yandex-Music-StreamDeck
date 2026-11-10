@@ -89,7 +89,7 @@ The `watch` command uses the Elgato CLI to automatically restart the plugin in S
 ## Important Configuration
 
 All configuration constants defined in `src/utils/constants/config.ts`:
-- `CDP_CONFIG`: Default port (9222), host, connection timeout
+- `CDP_CONFIG`: Default port (9339; not 9222, which clashes with a debug Chrome), host, connection timeout
 - `RECONNECTION_CONFIG`: Max reconnection attempts, delays
 - `APP_LIFECYCLE_CONFIG`: Grace periods, UI ready timeouts
 - `RETRY_CONFIG`: Retry attempts for UI operations
